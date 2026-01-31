@@ -56,7 +56,7 @@ export default function DashboardLayout({
                 <div className="flex flex-col h-full">
                     {/* Logo */}
                     <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                        <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-sky-400 bg-clip-text text-transparent">
                             Vida Digital
                         </h1>
                         <button
@@ -76,8 +76,8 @@ export default function DashboardLayout({
                                     key={item.name}
                                     href={item.href}
                                     className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${isActive
-                                            ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-                                            : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                                        ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+                                        : "text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                                         }`}
                                     onClick={() => setSidebarOpen(false)}
                                 >
@@ -124,7 +124,7 @@ export default function DashboardLayout({
                     >
                         <Menu className="w-6 h-6" />
                     </button>
-                    <h1 className="ml-4 text-lg font-semibold text-gray-900 dark:text-white">
+                    <h1 className="ml-4 text-lg font-semibold bg-gradient-to-r from-blue-600 to-sky-400 bg-clip-text text-transparent">
                         CRM Vida Digital
                     </h1>
                 </div>
