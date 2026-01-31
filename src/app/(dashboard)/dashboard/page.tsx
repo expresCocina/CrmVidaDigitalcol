@@ -9,10 +9,21 @@ import {
     CheckCircle2,
 } from "lucide-react";
 
-async function getDashboardStats() {
+interface DashboardStats {
+    leads_nuevos: number;
+    leads_convertidos: number;
+    citas_programadas: number;
+    valor_oportunidades: number;
+    conversaciones_activas: number;
+    actividades_pendientes: number;
+}
+
+async function getDashboardStats(): Promise<DashboardStats> {
     const supabase = await createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
         redirect("/login");
@@ -23,7 +34,16 @@ async function getDashboardStats() {
         p_usuario_id: user.id,
     });
 
-    return stats || {};
+    return (
+        (stats as unknown as DashboardStats) || {
+            leads_nuevos: 0,
+            leads_convertidos: 0,
+            citas_programadas: 0,
+            valor_oportunidades: 0,
+            conversaciones_activas: 0,
+            actividades_pendientes: 0,
+        }
+    );
 }
 
 export default async function DashboardPage() {
