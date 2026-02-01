@@ -1,5 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { Database } from "@/types/supabase";
+// Tipos temporalmente deshabilitados - regenerar con: npx supabase gen types typescript
+// import { Database } from "@/types/supabase";
 
 /**
  * Creates an admin Supabase client with Service Role key
@@ -13,7 +14,7 @@ export function createAdminClient() {
         throw new Error("Missing Supabase environment variables for admin client");
     }
 
-    return createSupabaseClient<Database>(supabaseUrl, supabaseServiceKey, {
+    return createSupabaseClient<any>(supabaseUrl, supabaseServiceKey, {
         auth: {
             autoRefreshToken: false,
             persistSession: false,
