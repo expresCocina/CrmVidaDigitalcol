@@ -61,12 +61,12 @@ export function getNowUTC(): string {
 /**
  * Formatea una fecha para mostrar en la UI con zona horaria de Colombia
  * @param date - Fecha a formatear
- * @param format - Formato deseado ('short' | 'long' | 'time' | 'datetime')
+ * @param format - Formato deseado ('short' | 'long' | 'time' | 'datetime' | 'short-datetime')
  * @returns String formateado
  */
 export function formatColombiaDate(
     date: Date | string,
-    format: 'short' | 'long' | 'time' | 'datetime' = 'short'
+    format: 'short' | 'long' | 'time' | 'datetime' | 'short-datetime' = 'short'
 ): string {
     const d = typeof date === 'string' ? new Date(date) : date;
 
@@ -91,6 +91,13 @@ export function formatColombiaDate(
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }),
+        ...(format === 'short-datetime' && {
+            day: 'numeric',
+            month: 'short',
             hour: '2-digit',
             minute: '2-digit',
             hour12: true

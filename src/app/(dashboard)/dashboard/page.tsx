@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getNowColombia } from "@/lib/utils/dates";
+import { getNowColombia, formatColombiaDate } from "@/lib/utils/dates";
 import {
     Users,
     UserPlus,
@@ -284,7 +284,7 @@ export default async function DashboardPage() {
                                                 {activity.titulo}
                                             </p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                {format(new Date(activity.fecha), "d MMM, h:mm a", { locale: es })} - {activity.usuario_nombre || 'Usuario'}
+                                                {formatColombiaDate(activity.fecha, 'short-datetime')} - {activity.usuario_nombre || 'Usuario'}
                                             </p>
                                         </div>
                                     </div>
@@ -313,7 +313,7 @@ export default async function DashboardPage() {
                                             {cita.titulo}
                                         </p>
                                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {format(new Date(cita.fecha_inicio), "EEEE d MMM, h:mm a", { locale: es })}
+                                            {formatColombiaDate(cita.fecha_inicio, 'datetime')}
                                         </p>
                                     </div>
                                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
