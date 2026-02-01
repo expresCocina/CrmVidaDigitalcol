@@ -288,13 +288,12 @@ export default function IAPage() {
                                             Activo
                                         </label>
                                     </div>
-                                    
+
                                     {editingConfig && (
                                         <div className="col-span-full bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-300">
-                                            Editando: <strong>{editingConfig.nombre}</strong> (ID: {editingConfig.id.substring(0,8)}...)
+                                            Editando: <strong>{editingConfig.nombre}</strong> (ID: {editingConfig.id.substring(0, 8)}...)
                                         </div>
                                     )}
-                                    </div>
                                 </div>
 
                                 <div className="flex justify-end space-x-3 pt-4">
@@ -318,83 +317,83 @@ export default function IAPage() {
                                     </button>
                                 </div>
                             </form>
-                )}
+                        )}
 
-                {/* Lista de Configuraciones */}
-                <div className="space-y-4">
-                    {loading ? (
-                        <p className="text-center text-gray-500 py-8">Cargando configuraciones...</p>
-                    ) : configuraciones.length > 0 ? (
-                        configuraciones.map((config) => (
-                            <div key={config.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                            {config.nombre}
-                                        </h3>
-                                        <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                            <div>
-                                                <span className="text-gray-500 dark:text-gray-400">Tipo:</span>
-                                                <span className="ml-2 text-gray-900 dark:text-white">{config.tipo}</span>
+                        {/* Lista de Configuraciones */}
+                        <div className="space-y-4">
+                            {loading ? (
+                                <p className="text-center text-gray-500 py-8">Cargando configuraciones...</p>
+                            ) : configuraciones.length > 0 ? (
+                                configuraciones.map((config) => (
+                                    <div key={config.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                                    {config.nombre}
+                                                </h3>
+                                                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Tipo:</span>
+                                                        <span className="ml-2 text-gray-900 dark:text-white">{config.tipo}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Modelo:</span>
+                                                        <span className="ml-2 text-gray-900 dark:text-white">{config.modelo}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Temperatura:</span>
+                                                        <span className="ml-2 text-gray-900 dark:text-white">{config.temperatura}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Max Tokens:</span>
+                                                        <span className="ml-2 text-gray-900 dark:text-white">{config.max_tokens}</span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <span className="text-gray-500 dark:text-gray-400">Modelo:</span>
-                                                <span className="ml-2 text-gray-900 dark:text-white">{config.modelo}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500 dark:text-gray-400">Temperatura:</span>
-                                                <span className="ml-2 text-gray-900 dark:text-white">{config.temperatura}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500 dark:text-gray-400">Max Tokens:</span>
-                                                <span className="ml-2 text-gray-900 dark:text-white">{config.max_tokens}</span>
+                                            <div className="flex items-center space-x-2 ml-4">
+                                                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${config.activo
+                                                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                                    : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
+                                                    }`}>
+                                                    {config.activo ? "Activo" : "Inactivo"}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleEdit(config)}
+                                                    className="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg"
+                                                >
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(config.id)}
+                                                    className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="flex items-center space-x-2 ml-4">
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${config.activo
-                                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                                            : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400"
-                                            }`}>
-                                            {config.activo ? "Activo" : "Inactivo"}
-                                        </span>
-                                        <button
-                                            onClick={() => handleEdit(config)}
-                                            className="p-2 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded-lg"
-                                        >
-                                            <Edit className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDelete(config.id)}
-                                            className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30 rounded-lg"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12">
+                                    <Brain className="mx-auto h-12 w-12 text-gray-400" />
+                                    <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay configuraciones</h3>
+                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                        Comienza creando tu primera configuración de IA.
+                                    </p>
                                 </div>
-                            </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-12">
-                            <Brain className="mx-auto h-12 w-12 text-gray-400" />
-                            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay configuraciones</h3>
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                Comienza creando tu primera configuración de IA.
-                            </p>
+                            )}
                         </div>
-                    )}
-                </div>
-            </div>
+                    </div>
                 )}
 
-            {activeTab === "prompts" && (
-                <PromptsTab configuraciones={configuraciones} />
-            )}
+                {activeTab === "prompts" && (
+                    <PromptsTab configuraciones={configuraciones} />
+                )}
 
-            {activeTab === "historial" && (
-                <HistorialTab />
-            )}
-        </div>
+                {activeTab === "historial" && (
+                    <HistorialTab />
+                )}
+            </div>
         </div >
     );
 }
