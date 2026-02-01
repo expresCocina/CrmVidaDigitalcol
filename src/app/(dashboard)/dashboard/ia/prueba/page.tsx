@@ -31,7 +31,31 @@ export default function PruebaIAPage() {
             });
 
             if (invokeError) {
-                throw invokeError;
+                // Intentar leer el cuerpo del error si existe
+                console.error("Error de invocación:", invokeError);
+                let detailMsg = invokeError.message;
+
+                if (invokeError instanceof Error) {
+                    detailMsg = `${invokeError.name}: ${invokeError.message}`;
+                }
+
+                // Si es un error HTTP, intentar dar más contexto
+                // @ts-ignore
+                if (invokeError.context?.response) {
+                    // @ts-ignore
+                    const status = invokeError.context.response.status;
+                    // @ts-ignore
+                    const statusText = invokeError.context.response.statusText;
+                    detailMsg += ` (Status: ${status} ${statusText})`;
+
+                    if (status === 404) {
+                        detailMsg = "La función 'ai-assistant' no fue encontrada (Error 404). Posiblemente no está desplegada en Supabase.";
+                    } else if (status === 500) {
+                        detailMsg = "Error interno en la función (Error 500). Verifica los logs en Supabase o la API Key.";
+                    }
+                }
+
+                throw new Error(detailMsg);
             }
 
             setRespuesta(data);
@@ -174,8 +198,8 @@ export default function PruebaIAPage() {
                         {/* Envío Automático */}
                         {respuesta.enviar_automaticamente !== undefined && (
                             <div className={`rounded-lg p-3 ${respuesta.enviar_automaticamente
-                                    ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
-                                    : 'bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700'
+                                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                                : 'bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700'
                                 }`}>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
                                     {respuesta.enviar_automaticamente
