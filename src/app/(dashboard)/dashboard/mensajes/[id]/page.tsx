@@ -11,29 +11,30 @@ import Link from "next/link";
 interface Mensaje {
     id: string;
     contenido: string;
-    tipo: string;
+    tipo: string | null;
     direccion: string;
-    leido: boolean;
-    entregado: boolean;
+    leido: boolean | null;
+    entregado: boolean | null;
     created_at: string;
-    enviado_por?: string;
+    enviado_por?: string | null;
 }
 
 interface Conversacion {
     id: string;
     canal: string;
-    identificador_externo: string;
-    estado: string;
-    lead_id?: string;
-    cliente_id?: string;
-    leads?: { nombre: string };
-    clientes?: { nombre: string };
+    identificador_externo: string | null;
+    estado: string | null;
+    lead_id?: string | null;
+    cliente_id?: string | null;
+    leads?: { nombre: string } | null;
+    clientes?: { nombre: string } | null;
 }
 
-export default function ConversacionPage({ params }: { params: { id: string } }) {
+export default function ConversacionPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const supabase = createClient();
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [id, setId] = useState<string>("");
 
     const [conversacion, setConversacion] = useState<Conversacion | null>(null);
     const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -41,15 +42,22 @@ export default function ConversacionPage({ params }: { params: { id: string } })
     const [nuevoMensaje, setNuevoMensaje] = useState("");
 
     useEffect(() => {
-        fetchConversacion();
-        fetchMensajes();
-    }, [params.id]);
+        params.then(p => setId(p.id));
+    }, []);
+
+    useEffect(() => {
+        if (id) {
+            fetchConversacion();
+            fetchMensajes();
+        }
+    }, [id]);
 
     useEffect(() => {
         scrollToBottom();
     }, [mensajes]);
 
     const fetchConversacion = async () => {
+        // @ts-ignore - Las tablas 'conversaciones', 'clientes' existen en la BD pero faltan en los tipos
         const { data, error } = await supabase
             .from("conversaciones")
             .select(`
@@ -57,7 +65,7 @@ export default function ConversacionPage({ params }: { params: { id: string } })
                 leads (nombre),
                 clientes (nombre)
             `)
-            .eq("id", params.id)
+            .eq("id", id)
             .single();
 
         if (!error && data) {
@@ -67,10 +75,11 @@ export default function ConversacionPage({ params }: { params: { id: string } })
 
     const fetchMensajes = async () => {
         setLoading(true);
+        // @ts-ignore - La tabla 'mensajes' existe en la BD pero falta en los tipos
         const { data, error } = await supabase
             .from("mensajes")
             .select("*")
-            .eq("conversacion_id", params.id)
+            .eq("conversacion_id", id)
             .order("created_at", { ascending: true });
 
         if (!error && data) {
@@ -147,8 +156,8 @@ export default function ConversacionPage({ params }: { params: { id: string } })
                             >
                                 <div
                                     className={`max-w-md px-4 py-2 rounded-lg ${mensaje.direccion === "saliente"
-                                            ? "bg-blue-600 text-white"
-                                            : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
                                         }`}
                                 >
                                     <p className="text-sm whitespace-pre-wrap break-words">{mensaje.contenido}</p>

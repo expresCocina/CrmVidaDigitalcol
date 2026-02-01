@@ -4,13 +4,15 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { redirect } from "next/navigation";
 
-export default async function EditAppointmentPage({ params }: { params: { id: string } }) {
+export default async function EditAppointmentPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
     const supabase = await createClient();
 
+    // @ts-ignore - La tabla 'citas' existe en la BD pero falta en los tipos generados
     const { data: cita, error } = await supabase
         .from("citas")
         .select("*")
-        .eq("id", params.id)
+        .eq("id", id)
         .single();
 
     if (error || !cita) {
@@ -38,7 +40,7 @@ export default async function EditAppointmentPage({ params }: { params: { id: st
             </div>
 
             {/* Form */}
-            <AppointmentForm initialData={cita} citaId={params.id} />
+            <AppointmentForm initialData={cita} citaId={id} />
         </div>
     );
 }
