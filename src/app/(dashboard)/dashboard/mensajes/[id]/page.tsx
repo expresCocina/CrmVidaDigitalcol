@@ -15,7 +15,7 @@ interface Mensaje {
     direccion: string;
     leido: boolean | null;
     entregado: boolean | null;
-    created_at: string;
+    created_at: string | null;
     enviado_por?: string | null;
 }
 
@@ -163,7 +163,7 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                                     <p className="text-sm whitespace-pre-wrap break-words">{mensaje.contenido}</p>
                                     <div className={`flex items-center justify-end space-x-1 mt-1 text-xs ${mensaje.direccion === "saliente" ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
                                         }`}>
-                                        <span>{format(new Date(mensaje.created_at), "HH:mm", { locale: es })}</span>
+                                        <span>{format(new Date(mensaje.created_at || new Date().toISOString()), "HH:mm", { locale: es })}</span>
                                         {mensaje.direccion === "saliente" && (
                                             <>
                                                 {mensaje.leido ? (
