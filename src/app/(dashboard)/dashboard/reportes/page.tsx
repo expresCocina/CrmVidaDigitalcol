@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 import { es } from "date-fns/locale";
+import { getNowColombia, getStartOfDayColombia, getEndOfDayColombia } from "@/lib/utils/dates";
 import {
     BarChart3,
     TrendingUp,
@@ -78,13 +79,14 @@ export default function ReportesPage() {
     }, [dateFilter]);
 
     const getDateRange = () => {
-        const now = new Date();
+        const now = getNowColombia(); // Usar hora de Colombia
         let startDate: Date;
         let endDate = now;
 
         switch (dateFilter) {
             case "today":
-                startDate = new Date(now.setHours(0, 0, 0, 0));
+                startDate = getStartOfDayColombia(); // 00:00:00 en Colombia
+                endDate = getEndOfDayColombia(); // 23:59:59 en Colombia
                 break;
             case "week":
                 startDate = subDays(now, 7);

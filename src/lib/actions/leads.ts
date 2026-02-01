@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { getNowUTC } from "@/lib/utils/dates";
 
 export async function convertLeadToClient(leadId: string) {
     try {
@@ -69,9 +70,9 @@ export async function convertLeadToClient(leadId: string) {
 
         console.log("[convertLeadToClient] Cliente creado exitosamente, ID:", client.id);
 
-        // 3. Actualizar Lead con fecha_conversion y cliente_id
+        // 3. Actualizar Lead con fecha_conversion y cliente_id (usando hora de Colombia)
         console.log("[convertLeadToClient] Actualizando lead...");
-        const now = new Date().toISOString();
+        const now = getNowUTC(); // Hora actual en formato UTC
         const { error: updateError } = await adminClient
             .from("leads")
             .update({

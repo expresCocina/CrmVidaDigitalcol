@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getNowColombia } from "@/lib/utils/dates";
 import {
     Users,
     UserPlus,
@@ -72,11 +73,11 @@ async function getDashboardData() {
     // Use admin client for data queries to bypass RLS
     const adminClient = createAdminClient();
 
-    // Calculate date ranges
-    const now = new Date();
+    // Calculate date ranges usando hora de Colombia
+    const now = getNowColombia();
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const last30DaysStr = last30Days.toISOString();
-    const nowStr = new Date().toISOString();
+    const nowStr = now.toISOString();
 
     // 1. Leads Nuevos (Últimos 30 días)
     // @ts-ignore
