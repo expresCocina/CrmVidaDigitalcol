@@ -31,6 +31,15 @@ interface DashboardData {
     appointments: any[];
 }
 
+interface DashboardStats {
+    leads_nuevos: number;
+    leads_convertidos: number;
+    citas_programadas: number;
+    valor_oportunidades: number;
+    conversaciones_activas: number;
+    actividades_pendientes: number;
+}
+
 interface Activity {
     id: string;
     tipo: string;
