@@ -149,7 +149,7 @@ export default function ClientsPage() {
                                                         {cliente.nombre}
                                                     </div>
                                                     <div className="text-xs text-gray-500 dark:text-gray-400 uppercase">
-                                                        {cliente.tipo_cliente}
+                                                        {cliente.tipo_cliente || 'N/A'}
                                                     </div>
                                                 </div>
                                             </div>
@@ -179,8 +179,8 @@ export default function ClientsPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(cliente.estado)}`}>
-                                                {cliente.estado.charAt(0).toUpperCase() + cliente.estado.slice(1)}
+                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(cliente.estado || 'activo')}`}>
+                                                {(cliente.estado || 'activo').charAt(0).toUpperCase() + (cliente.estado || 'activo').slice(1)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
