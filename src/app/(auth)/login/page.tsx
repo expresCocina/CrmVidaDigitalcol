@@ -105,17 +105,7 @@ export default function LoginPage() {
                         {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
                     </button>
 
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                            ¿No tienes cuenta?{" "}
-                            <Link
-                                href="/register"
-                                className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400"
-                            >
-                                Regístrate aquí
-                            </Link>
-                        </p>
-                    </div>
+                    {/* Registration link removed as this is a private single-user CRM */}
                 </form>
             </div>
         </div>
