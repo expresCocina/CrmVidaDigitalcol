@@ -50,7 +50,7 @@ export default function IAPage() {
     const fetchConfiguraciones = async () => {
         setLoading(true);
         const { data, error } = await supabase
-            .from("configuracion_ia")
+            .from("configuracion_ia" as any)
             .select("*")
             .order("created_at", { ascending: false });
 
@@ -66,7 +66,7 @@ export default function IAPage() {
         try {
             if (editingConfig) {
                 const { error } = await supabase
-                    .from("configuracion_ia")
+                    .from("configuracion_ia" as any)
                     .update(formData)
                     .eq("id", editingConfig.id);
 
@@ -80,7 +80,7 @@ export default function IAPage() {
 
                 // @ts-ignore
                 const { error } = await supabase
-                    .from("configuracion_ia")
+                    .from("configuracion_ia" as any)
                     .insert([formData]);
 
                 if (error) throw error;
@@ -114,7 +114,7 @@ export default function IAPage() {
 
         try {
             const { error } = await supabase
-                .from("configuracion_ia")
+                .from("configuracion_ia" as any)
                 .delete()
                 .eq("id", id);
 
@@ -420,7 +420,7 @@ function PromptsTab({ configuraciones }: { configuraciones: ConfiguracionIA[] })
     const fetchPrompts = async () => {
         setLoading(true);
         const { data, error } = await supabase
-            .from("prompts_sistema")
+            .from("prompts_sistema" as any)
             .select(`
                 *,
                 configuracion_ia (nombre)
@@ -439,7 +439,7 @@ function PromptsTab({ configuraciones }: { configuraciones: ConfiguracionIA[] })
         try {
             if (editingPrompt) {
                 const { error } = await supabase
-                    .from("prompts_sistema")
+                    .from("prompts_sistema" as any)
                     .update(formData)
                     .eq("id", editingPrompt.id);
 
@@ -447,7 +447,7 @@ function PromptsTab({ configuraciones }: { configuraciones: ConfiguracionIA[] })
             } else {
                 // @ts-ignore
                 const { error } = await supabase
-                    .from("prompts_sistema")
+                    .from("prompts_sistema" as any)
                     .insert([formData]);
 
                 if (error) throw error;
@@ -467,7 +467,7 @@ function PromptsTab({ configuraciones }: { configuraciones: ConfiguracionIA[] })
         if (!confirm("¿Estás seguro de eliminar este prompt?")) return;
 
         const { error } = await supabase
-            .from("prompts_sistema")
+            .from("prompts_sistema" as any)
             .delete()
             .eq("id", id);
 
@@ -684,7 +684,7 @@ function HistorialTab() {
     const fetchInteracciones = async () => {
         setLoading(true);
         const { data, error } = await supabase
-            .from("interacciones_ia")
+            .from("interacciones_ia" as any)
             .select(`
                 *,
                 configuracion_ia (nombre),
