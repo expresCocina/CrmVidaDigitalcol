@@ -20,14 +20,14 @@ import { es } from "date-fns/locale";
 interface Cita {
     id: string;
     titulo: string;
-    descripcion?: string;
+    descripcion?: string | null;
     fecha_inicio: string;
     fecha_fin: string;
     tipo: string;
     estado: string;
-    ubicacion?: string;
-    lead_id?: string;
-    cliente_id?: string;
+    ubicacion?: string | null;
+    lead_id?: string | null;
+    cliente_id?: string | null;
     created_at: string;
 }
 
