@@ -24,8 +24,8 @@ interface Cliente {
     email?: string | null;
     telefono?: string | null;
     empresa?: string | null;
-    tipo_cliente: string;
-    estado: string;
+    tipo_cliente?: string | null;
+    estado?: string;
     ciudad?: string | null;
     created_at: string;
 }
