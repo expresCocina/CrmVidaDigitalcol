@@ -42,9 +42,9 @@ export default function ProfileSettings() {
 
             if (profile) {
                 setFormData({
-                    nombre_completo: profile.nombre_completo || "",
-                    telefono: profile.telefono || "",
-                    avatar_url: profile.avatar_url || ""
+                    nombre_completo: (profile as any).nombre_completo || "",
+                    telefono: (profile as any).telefono || "",
+                    avatar_url: (profile as any).avatar_url || ""
                 });
             }
         } catch (error) {

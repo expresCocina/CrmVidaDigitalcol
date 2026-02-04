@@ -91,7 +91,7 @@ export default function AppointmentForm({ initialData, citaId }: AppointmentForm
             } else {
                 const { error: insertError } = await supabase
                     .from("citas")
-                    .insert([payload]);
+                    .insert([payload] as any);
 
                 if (insertError) throw insertError;
             }
