@@ -169,13 +169,13 @@ export default function ReportesPage() {
 
             // Actividades
             const { data: currentActivities } = await supabase
-                .from("actividades")
+                .from("actividades" as any)
                 .select("*")
                 .gte("created_at", startDate.toISOString())
                 .lte("created_at", endDate.toISOString());
 
             const { data: prevActivities } = await supabase
-                .from("actividades")
+                .from("actividades" as any)
                 .select("*")
                 .gte("created_at", prevStartDate.toISOString())
                 .lt("created_at", prevEndDate.toISOString());
@@ -235,7 +235,7 @@ export default function ReportesPage() {
 
             // Top usuarios
             const { data: topUsersData } = await supabase
-                .from("actividades")
+                .from("actividades" as any)
                 .select(`
                     creado_por,
                     usuarios!actividades_creado_por_fkey (nombre_completo)
