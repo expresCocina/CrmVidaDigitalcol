@@ -55,7 +55,7 @@ export default function IAPage() {
             .order("created_at", { ascending: false });
 
         if (!error && data) {
-            setConfiguraciones(data);
+            setConfiguraciones(data as any);
         }
         setLoading(false);
     };
@@ -428,7 +428,7 @@ function PromptsTab({ configuraciones }: { configuraciones: ConfiguracionIA[] })
             .order("created_at", { ascending: false });
 
         if (!error && data) {
-            setPrompts(data);
+            setPrompts(data as any);
         }
         setLoading(false);
     };
@@ -694,7 +694,7 @@ function HistorialTab() {
             .limit(50);
 
         if (!error && data) {
-            setInteracciones(data);
+            setInteracciones(data as any);
         }
         setLoading(false);
     };
