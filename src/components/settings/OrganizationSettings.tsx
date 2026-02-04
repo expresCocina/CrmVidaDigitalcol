@@ -36,19 +36,20 @@ export default function OrganizationSettings() {
                 .single();
 
             if (data) {
+                const orgData = data as any;
                 setFormData({
-                    id: data.id,
-                    nombre_empresa: data.nombre_empresa || "",
-                    email_contacto: data.email_contacto || "",
-                    telefono_contacto: data.telefono_contacto || "",
-                    direccion: data.direccion || "",
-                    ciudad: data.ciudad || "",
-                    pais: data.pais || "",
-                    moneda: data.moneda || "COP",
-                    zona_horaria: data.zona_horaria || "America/Bogota",
-                    logo_url: data.logo_url || ""
+                    id: orgData.id,
+                    nombre_empresa: orgData.nombre_empresa || "",
+                    email_contacto: orgData.email_contacto || "",
+                    telefono_contacto: orgData.telefono_contacto || "",
+                    direccion: orgData.direccion || "",
+                    ciudad: orgData.ciudad || "",
+                    pais: orgData.pais || "",
+                    moneda: orgData.moneda || "COP",
+                    zona_horaria: orgData.zona_horaria || "America/Bogota",
+                    logo_url: orgData.logo_url || ""
                 });
-            } else if (error && error.code !== 'PGRST116') {
+            } else if (error && (error as any).code !== 'PGRST116') {
                 // If error is NOT "no rows returned"
                 console.error("Error fetching org config:", error);
             }
@@ -78,19 +79,19 @@ export default function OrganizationSettings() {
 
             if (formData.id) {
                 const { error: updateError } = await supabase
-                    .from("configuracion_organizacion")
+                    .from("configuracion_organizacion" as any)
                     .update(payload)
                     .eq("id", formData.id);
                 error = updateError;
             } else {
                 const { error: insertError, data: newData } = await supabase
-                    .from("configuracion_organizacion")
+                    .from("configuracion_organizacion" as any)
                     .insert([payload])
                     .select()
                     .single();
 
                 if (newData) {
-                    setFormData(prev => ({ ...prev, id: newData.id }));
+                    setFormData(prev => ({ ...prev, id: (newData as any).id }));
                 }
                 error = insertError;
             }
@@ -133,7 +134,7 @@ export default function OrganizationSettings() {
 
             if (formData.id) {
                 await supabase
-                    .from("configuracion_organizacion")
+                    .from("configuracion_organizacion" as any)
                     .update({ logo_url: publicUrl })
                     .eq("id", formData.id);
             }
