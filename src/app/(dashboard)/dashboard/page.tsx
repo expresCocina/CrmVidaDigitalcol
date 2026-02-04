@@ -43,9 +43,9 @@ interface DashboardStats {
 
 interface Activity {
     id: string;
-    tipo: string;
+    tipo: string | null;
     titulo: string;
-    descripcion: string;
+    descripcion: string | null;
     fecha: string;
     usuario_nombre: string;
 }
@@ -54,8 +54,8 @@ interface Cita {
     id: string;
     titulo: string;
     fecha_inicio: string;
-    tipo: string;
-    estado: string;
+    tipo: string | null;
+    estado: string | null;
 }
 
 async function getDashboardData() {
@@ -115,7 +115,7 @@ async function getDashboardData() {
     // 5. Actividades Recientes (sin filtro de usuario para mostrar todas)
     // @ts-ignore
     const { data: activitiesData, error: activitiesError } = await adminClient
-        .from("actividades")
+        .from("actividades" as any)
         .select("id, tipo, titulo, descripcion, created_at, creado_por")
         .order("created_at", { ascending: false })
         .limit(10);
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         },
     ];
 
-    const getActivityIcon = (type: string) => {
+    const getActivityIcon = (type: string | null) => {
         switch (type) {
             case 'llamada': return Phone;
             case 'email': return Mail;
@@ -317,7 +317,7 @@ export default async function DashboardPage() {
                                         </p>
                                     </div>
                                     <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-                                        {cita.tipo}
+                                        {cita.tipo || 'General'}
                                     </span>
                                 </div>
                             ))
