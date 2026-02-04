@@ -244,8 +244,8 @@ export default function ReportesPage() {
                 .lte("created_at", endDate.toISOString());
 
             const userMap = new Map<string, number>();
-            topUsersData?.forEach(activity => {
-                const nombre = (activity.usuarios as any)?.nombre_completo || "Desconocido";
+            topUsersData?.forEach((activity: any) => {
+                const nombre = activity.usuarios?.nombre_completo || "Desconocido";
                 userMap.set(nombre, (userMap.get(nombre) || 0) + 1);
             });
             const topUsers = Array.from(userMap, ([nombre, actividades]) => ({ nombre, actividades }))
