@@ -10,7 +10,7 @@ import { es } from "date-fns/locale";
 interface Conversacion {
     id: string;
     canal: string;
-    identificador_externo: string;
+    identificador_externo: string | null;
     estado: string;
     ultimo_mensaje_at: string;
     metadata: any;
@@ -43,7 +43,8 @@ export default function MensajesPage() {
             .order("ultimo_mensaje_at", { ascending: false });
 
         if (!error && data) {
-            setConversaciones(data);
+            // Force type compatibility or allow data to flow if interface matches
+            setConversaciones(data as Conversacion[]);
         }
         setLoading(false);
     };
