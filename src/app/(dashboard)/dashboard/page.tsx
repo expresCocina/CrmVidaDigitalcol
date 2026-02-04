@@ -107,7 +107,7 @@ async function getDashboardData() {
     // 4. Actividades Pendientes
     // @ts-ignore
     const { count: actividadesPendientes } = await adminClient
-        .from("actividades")
+        .from("actividades" as any)
         .select("*", { count: "exact", head: true })
         .eq("estado", "pendiente")
         .gte("fecha_programada", nowStr);
