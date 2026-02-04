@@ -32,12 +32,12 @@ export default function IntegrationsSettings() {
     const fetchIntegrations = async () => {
         try {
             const { data, error } = await supabase
-                .from("integraciones")
+                .from("integraciones" as any)
                 .select("*")
                 .order("nombre");
 
             if (data) {
-                setIntegrations(data);
+                setIntegrations(data as any);
             }
         } catch (error) {
             console.error("Error fetching integrations:", error);
@@ -55,7 +55,7 @@ export default function IntegrationsSettings() {
             if (existing) {
                 // Update
                 const { error } = await supabase
-                    .from("integraciones")
+                    .from("integraciones" as any)
                     .update({ activo: !currentState, updated_at: new Date().toISOString() })
                     .eq("id", existing.id);
 
@@ -66,7 +66,7 @@ export default function IntegrationsSettings() {
                 if (!defaultData) return;
 
                 const { error } = await supabase
-                    .from("integraciones")
+                    .from("integraciones" as any)
                     .insert([{
                         nombre: defaultData.nombre,
                         tipo: tipo,

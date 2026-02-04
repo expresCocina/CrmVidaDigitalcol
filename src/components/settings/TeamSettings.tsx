@@ -30,7 +30,7 @@ export default function TeamSettings() {
         try {
             // Note: This requires policies allowing view of users table
             const { data, error } = await supabase
-                .from("usuarios")
+                .from("usuarios" as any)
                 .select(`
                     *,
                     roles (nombre)
@@ -38,7 +38,7 @@ export default function TeamSettings() {
                 .order("nombre_completo");
 
             if (data) {
-                setUsers(data);
+                setUsers(data as any);
             }
         } catch (error) {
             console.error("Error fetching users:", error);
