@@ -69,14 +69,16 @@ export default function AppointmentForm({ initialData, citaId }: AppointmentForm
         try {
             const { data: { user } } = await supabase.auth.getUser();
 
+            if (!user) throw new Error("Usuario no autenticado");
+
             const payload = {
                 ...formData,
                 fecha_inicio: new Date(formData.fecha_inicio).toISOString(),
                 fecha_fin: new Date(formData.fecha_fin).toISOString(),
                 lead_id: formData.lead_id || null,
                 cliente_id: formData.cliente_id || null,
-                asignado_a: user?.id,
-                usuario_id: user?.id
+                asignado_a: user.id,
+                usuario_id: user.id
             };
 
             if (citaId) {
