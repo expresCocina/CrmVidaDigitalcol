@@ -58,7 +58,7 @@ export default function ServiciosCliente({ clienteId }: Props) {
         setLoading(true);
 
         // Fetch servicios del cliente
-        const { data: serviciosData } = await supabase
+        const { data: serviciosData } = await (supabase as any)
             .from("servicios_clientes")
             .select(`
                 *,
@@ -71,7 +71,7 @@ export default function ServiciosCliente({ clienteId }: Props) {
         if (serviciosData) setServicios(serviciosData as any);
 
         // Fetch servicios disponibles
-        const { data: serviciosDisp } = await supabase
+        const { data: serviciosDisp } = await (supabase as any)
             .from("servicios")
             .select("*")
             .eq("activo", true)
@@ -80,7 +80,7 @@ export default function ServiciosCliente({ clienteId }: Props) {
         if (serviciosDisp) setServiciosDisponibles(serviciosDisp);
 
         // Fetch planes disponibles
-        const { data: planesDisp } = await supabase
+        const { data: planesDisp } = await (supabase as any)
             .from("planes")
             .select("*")
             .eq("activo", true)
@@ -105,12 +105,12 @@ export default function ServiciosCliente({ clienteId }: Props) {
         };
 
         if (editingId) {
-            await supabase
+            await (supabase as any)
                 .from("servicios_clientes")
                 .update(dataToSave)
                 .eq("id", editingId);
         } else {
-            await supabase
+            await (supabase as any)
                 .from("servicios_clientes")
                 .insert([dataToSave]);
         }
@@ -137,7 +137,7 @@ export default function ServiciosCliente({ clienteId }: Props) {
 
     const handleDelete = async (id: string) => {
         if (confirm('¿Estás seguro de eliminar este servicio?')) {
-            await supabase
+            await (supabase as any)
                 .from("servicios_clientes")
                 .delete()
                 .eq("id", id);
@@ -146,7 +146,7 @@ export default function ServiciosCliente({ clienteId }: Props) {
     };
 
     const handleChangeEstado = async (id: string, nuevoEstado: string) => {
-        await supabase
+        await (supabase as any)
             .from("servicios_clientes")
             .update({ estado: nuevoEstado })
             .eq("id", id);
