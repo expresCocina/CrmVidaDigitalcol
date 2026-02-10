@@ -6,8 +6,6 @@ import Link from "next/link";
 import {
     Plus, Search, Filter, FileText, Eye, Send, Check, X, Clock, AlertCircle
 } from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 interface Cotizacion {
     id: string;
@@ -296,7 +294,11 @@ export default function CotizacionesPage() {
                                                 {formatPrice(cot.total)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                                {format(new Date(cot.created_at), "dd MMM yyyy", { locale: es })}
+                                                {new Date(cot.created_at).toLocaleDateString('es-CO', {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: 'numeric'
+                                                })}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <Link
