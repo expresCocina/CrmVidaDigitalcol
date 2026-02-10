@@ -188,7 +188,7 @@ export default function ClientsPage() {
                                                 href={`/dashboard/clientes/${cliente.id}`}
                                                 className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                                             >
-                                                Editar
+                                                Ver Perfil
                                             </Link>
                                         </td>
                                     </tr>
