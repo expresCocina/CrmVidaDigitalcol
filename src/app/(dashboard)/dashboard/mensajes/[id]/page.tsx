@@ -7,13 +7,9 @@ import { ChevronLeft, Send, Phone, User, Check, CheckCheck } from "lucide-react"
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
-import { Database } from "@/types/database.types";
 
-type Mensaje = Database['public']['Tables']['mensajes']['Row'];
-type Conversacion = Database['public']['Tables']['conversaciones']['Row'] & {
-    leads?: { nombre: string } | null;
-    clientes?: { nombre: string } | null;
-};
+type Mensaje = any;
+type Conversacion = any;
 
 export default function ConversacionPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
