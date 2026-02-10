@@ -119,13 +119,15 @@ export default function Hero() {
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <Link
-                            href="#contacto"
+                        <a
+                            href="https://wa.me/573223844821?text=Hola,%20quiero%20acelerar%20el%20crecimiento%20de%20mi%20negocio"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="w-full sm:w-auto px-8 py-4 bg-white text-gray-900 rounded-full font-bold text-lg hover:bg-gray-100 transition-all hover:scale-105 hover:shadow-xl flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.1)]"
                         >
                             <Rocket className="w-5 h-5 mr-2 text-blue-600" />
                             Acelerar Crecimiento
-                        </Link>
+                        </a>
                         <Link
                             href="#servicios"
                             className="w-full sm:w-auto px-8 py-4 bg-gray-900 text-white border border-gray-800 rounded-full font-semibold text-lg hover:bg-gray-800 hover:border-gray-700 transition-all hover:scale-105 flex items-center justify-center"
