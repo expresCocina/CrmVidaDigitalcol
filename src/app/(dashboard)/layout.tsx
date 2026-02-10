@@ -15,6 +15,8 @@ import {
     LogOut,
     Menu,
     X,
+    Sparkles,
+    Package,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -24,6 +26,8 @@ const navigation = [
     { name: "Clientes", href: "/dashboard/clientes", icon: Users },
     { name: "Citas", href: "/dashboard/citas", icon: Calendar },
     { name: "Mensajes", href: "/dashboard/mensajes", icon: MessageSquare },
+    { name: "Planes", href: "/dashboard/planes", icon: Sparkles },
+    { name: "Servicios", href: "/dashboard/servicios", icon: Package },
     { name: "IA", href: "/dashboard/ia", icon: Brain },
     { name: "Reportes", href: "/dashboard/reportes", icon: BarChart3 },
     { name: "Configuración", href: "/dashboard/configuracion", icon: Settings },
