@@ -22,20 +22,18 @@ export default function Footer() {
                     <div>
                         <h3 className="text-white font-semibold mb-4">Servicios</h3>
                         <ul className="space-y-2">
-                            <li><Link href="/servicios/marketing-digital" className="hover:text-blue-400 transition-colors">Marketing Digital</Link></li>
-                            <li><Link href="/servicios/desarrollo-software" className="hover:text-blue-400 transition-colors">Desarrollo Web</Link></li>
-                            <li><Link href="/servicios/inteligencia-artificial" className="hover:text-blue-400 transition-colors">Chatbots e IA</Link></li>
-                            <li><Link href="/servicios/automatizacion" className="hover:text-blue-400 transition-colors">Automatización</Link></li>
+                            <li><Link href="/planes" className="hover:text-blue-400 transition-colors">Planes</Link></li>
+                            <li><Link href="/servicios" className="hover:text-blue-400 transition-colors">Catálogo de Servicios</Link></li>
+                            <li><Link href="#servicios" className="hover:text-blue-400 transition-colors">Soluciones</Link></li>
                         </ul>
                     </div>
 
                     <div>
                         <h3 className="text-white font-semibold mb-4">Compañía</h3>
                         <ul className="space-y-2">
-                            <li><Link href="#nosotros" className="hover:text-blue-400 transition-colors">Sobre Nosotros</Link></li>
-                            <li><Link href="#casos" className="hover:text-blue-400 transition-colors">Casos de Éxito</Link></li>
                             <li><Link href="#contacto" className="hover:text-blue-400 transition-colors">Contacto</Link></li>
-                            <li><Link href="/login" className="hover:text-blue-400 transition-colors">Acceso Clientes (CRM)</Link></li>
+                            <li><Link href="/terminos-condiciones" className="hover:text-blue-400 transition-colors">Términos y Condiciones</Link></li>
+                            <li><Link href="/login" className="hover:text-blue-400 transition-colors">Acceso CRM</Link></li>
                         </ul>
                     </div>
                 </div>
@@ -48,8 +46,8 @@ export default function Footer() {
                         </p>
                     </div>
                     <div className="flex space-x-6 mt-4 md:mt-0">
+                        <Link href="/terminos-condiciones" className="hover:text-white transition-colors">Términos y Condiciones</Link>
                         <Link href="/privacidad" className="hover:text-white transition-colors">Política de Privacidad</Link>
-                        <Link href="/terminos" className="hover:text-white transition-colors">Términos de Servicio</Link>
                     </div>
                 </div>
             </div>
