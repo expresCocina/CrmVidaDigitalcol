@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import {
-    Plus, Search, Filter, FileText, Eye, Send, Check, X, Clock, AlertCircle
+    Plus, Search, Filter, FileText, Eye, Send, Check, X, Clock, AlertCircle, Trash2
 } from "lucide-react";
 
 interface Cotizacion {
@@ -36,6 +36,9 @@ export default function CotizacionesPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterEstado, setFilterEstado] = useState("todas");
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [cotizacionToDelete, setCotizacionToDelete] = useState<Cotizacion | null>(null);
+    const [deleting, setDeleting] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
@@ -100,6 +103,40 @@ export default function CotizacionesPage() {
             currency: 'COP',
             minimumFractionDigits: 0
         }).format(price);
+    };
+
+    const handleDeleteClick = (cotizacion: Cotizacion) => {
+        setCotizacionToDelete(cotizacion);
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!cotizacionToDelete) return;
+
+        setDeleting(true);
+        try {
+            const { error } = await (supabase as any)
+                .from("cotizaciones")
+                .delete()
+                .eq("id", cotizacionToDelete.id);
+
+            if (error) throw error;
+
+            // Actualizar lista
+            setCotizaciones(cotizaciones.filter(c => c.id !== cotizacionToDelete.id));
+            setShowDeleteModal(false);
+            setCotizacionToDelete(null);
+        } catch (error) {
+            console.error("Error deleting cotizacion:", error);
+            alert("Error al eliminar la cotización");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setCotizacionToDelete(null);
     };
 
     const filteredCotizaciones = cotizaciones.filter(cot => {
@@ -301,13 +338,22 @@ export default function CotizacionesPage() {
                                                 })}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <Link
-                                                    href={`/dashboard/cotizaciones/${cot.id}`}
-                                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center"
-                                                >
-                                                    <Eye className="w-4 h-4 mr-1" />
-                                                    Ver
-                                                </Link>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <Link
+                                                        href={`/dashboard/cotizaciones/${cot.id}`}
+                                                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 inline-flex items-center"
+                                                    >
+                                                        <Eye className="w-4 h-4 mr-1" />
+                                                        Ver
+                                                    </Link>
+                                                    <button
+                                                        onClick={() => handleDeleteClick(cot)}
+                                                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 inline-flex items-center"
+                                                    >
+                                                        <Trash2 className="w-4 h-4 mr-1" />
+                                                        Eliminar
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -317,6 +363,71 @@ export default function CotizacionesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && cotizacionToDelete && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                                <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                                    Eliminar Cotización
+                                </h3>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    Esta acción no se puede deshacer
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <p className="text-gray-700 dark:text-gray-300 mb-2">
+                                ¿Estás seguro de que deseas eliminar la cotización:
+                            </p>
+                            <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
+                                <p className="font-semibold text-gray-900 dark:text-white">
+                                    {cotizacionToDelete.numero}
+                                </p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {cotizacionToDelete.cliente?.nombre || cotizacionToDelete.lead?.nombre}
+                                </p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white mt-1">
+                                    Total: {formatPrice(cotizacionToDelete.total)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={handleDeleteCancel}
+                                disabled={deleting}
+                                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteConfirm}
+                                disabled={deleting}
+                                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {deleting ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                        Eliminando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Eliminar
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

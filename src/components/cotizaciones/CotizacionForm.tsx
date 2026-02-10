@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
-    Plus, Trash2, Save, Send, X, Search, Calculator
+    Plus, Trash2, Save, Send, X, Search, Calculator, Eye
 } from "lucide-react";
 
 interface CotizacionItem {
@@ -523,6 +524,15 @@ export default function CotizacionForm({ cotizacionId }: { cotizacionId?: string
 
                     {/* Actions */}
                     <div className="space-y-3">
+                        {cotizacionId && (
+                            <Link
+                                href={`/dashboard/cotizaciones/${cotizacionId}/preview`}
+                                className="w-full px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center"
+                            >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Vista Previa / PDF
+                            </Link>
+                        )}
                         <button
                             onClick={() => handleSubmit(false)}
                             disabled={loading || items.length === 0}
