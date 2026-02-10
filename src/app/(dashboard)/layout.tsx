@@ -18,12 +18,14 @@ import {
     Sparkles,
     Package,
     FileText,
+    LayoutGrid,
 } from "lucide-react";
 import { useState } from "react";
 
 const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Leads", href: "/dashboard/leads", icon: UserPlus },
+    { name: "Pipeline", href: "/dashboard/pipeline", icon: LayoutGrid },
     { name: "Clientes", href: "/dashboard/clientes", icon: Users },
     { name: "Citas", href: "/dashboard/citas", icon: Calendar },
     { name: "Cotizaciones", href: "/dashboard/cotizaciones", icon: FileText },
