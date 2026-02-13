@@ -41,7 +41,16 @@ export default function CotizacionForm({ cotizacionId }: { cotizacionId?: string
         estado: 'borrador',
         valida_hasta: '',
         notas: '',
-        terminos_condiciones: 'Cotización válida por 15 días.\nPrecios sujetos a cambios sin previo aviso.\nTiempo de entrega: según proyecto.',
+        terminos_condiciones: `**Términos y Condiciones**
+
+1. **Vigencia**: Cotización válida por 15 días.
+2. **Precios**: Sujetos a cambios sin previo aviso.
+3. **Tiempo de Entrega**: Según proyecto.
+
+**Comunicación y Soporte:**
+- La comunicación según el plan contratado está disponible en horario laboral.
+- Si no contesto en el momento que me contactas, recibirás respuesta en el transcurso del día, siempre y cuando sea un asunto urgente.
+- Días de asesoramiento y acompañamiento según el plan contratado (consultar detalles del plan seleccionado).`,
         descuento: 0
     });
 
