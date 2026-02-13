@@ -39,7 +39,7 @@ export const metadata: Metadata = {
         siteName: "CRM Vida Digital Col",
         images: [
             {
-                url: "/og-image.png",
+                url: "/og-image.svg",
                 width: 1200,
                 height: 630,
                 alt: "CRM Vida Digital Col"
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
         card: "summary_large_image",
         title: "CRM Vida Digital Col - Sistema de Gestión Empresarial",
         description: "Sistema CRM completo para gestión de clientes, ventas, facturas y cotizaciones.",
-        images: ["/og-image.png"]
+        images: ["/og-image.svg"]
     },
     robots: {
         index: true,
