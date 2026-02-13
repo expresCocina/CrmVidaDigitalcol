@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Check, Sparkles, Phone } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+    title: "Planes",
+    description: "Planes todo incluido para automatización digital: Básico, Profesional, Premium y Enterprise. Elige el plan perfecto para hacer crecer tu presencia digital.",
+    openGraph: {
+        title: "Planes - Vida Digital Col",
+        description: "Planes que se adaptan a tu negocio. Desde automatización completa hasta servicios específicos.",
+    }
+};
 
 interface Plan {
     id: string;
@@ -75,8 +85,8 @@ export default async function PlanesPage() {
                             <div
                                 key={plan.id}
                                 className={`relative rounded-2xl p-8 ${plan.destacado
-                                        ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-2xl scale-105"
-                                        : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
+                                    ? "bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-2xl scale-105"
+                                    : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg"
                                     }`}
                             >
                                 {plan.destacado && (
@@ -118,8 +128,8 @@ export default async function PlanesPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={`w-full py-3 px-6 rounded-lg font-semibold transition-all flex items-center justify-center ${plan.destacado
-                                            ? "bg-white text-blue-600 hover:bg-gray-100"
-                                            : "bg-blue-600 text-white hover:bg-blue-700"
+                                        ? "bg-white text-blue-600 hover:bg-gray-100"
+                                        : "bg-blue-600 text-white hover:bg-blue-700"
                                         }`}
                                 >
                                     <Phone className="w-4 h-4 mr-2" />

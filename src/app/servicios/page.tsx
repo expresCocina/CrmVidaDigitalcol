@@ -1,6 +1,16 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Package, DollarSign } from "lucide-react";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+    title: "Servicios",
+    description: "Catálogo completo de servicios digitales: desarrollo web, CRM, contenido, video, diseño gráfico y más. Servicios individuales o paquetes personalizados.",
+    openGraph: {
+        title: "Servicios - Vida Digital Col",
+        description: "Catálogo completo de servicios digitales para tu negocio.",
+    }
+};
 
 interface Servicio {
     id: string;

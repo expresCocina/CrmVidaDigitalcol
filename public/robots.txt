@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+
+# Páginas públicas permitidas
+Allow: /
+Allow: /servicios
+Allow: /planes
+Allow: /privacidad
+Allow: /terminos
+
+# Sitemap
+Sitemap: https://crm-vida-digitalcol.vercel.app/sitemap.xml
