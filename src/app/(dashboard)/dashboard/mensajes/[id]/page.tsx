@@ -32,6 +32,30 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
             fetchConversacion();
             fetchMensajes();
 
+            // Función para reproducir sonido de notificación
+            const playNotificationSound = () => {
+                try {
+                    // Usar API de Audio Web
+                    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+                    oscillator.start(audioContext.currentTime);
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                } catch (error) {
+                    console.log('No se pudo reproducir sonido:', error);
+                }
+            };
+
             // Suscripción en tiempo real a nuevos mensajes
             const channel = supabase
                 .channel(`mensajes-${id}`)
@@ -47,6 +71,10 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                         console.log('Nuevo mensaje recibido:', payload);
                         if (payload.eventType === 'INSERT') {
                             setMensajes(prev => [...prev, payload.new as any]);
+                            // Reproducir sonido solo para mensajes entrantes
+                            if ((payload.new as any).direccion === 'entrante') {
+                                playNotificationSound();
+                            }
                         } else if (payload.eventType === 'UPDATE') {
                             setMensajes(prev => prev.map(m =>
                                 m.id === payload.new.id ? payload.new as any : m
@@ -194,7 +222,28 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                                         : "bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700"
                                         }`}
                                 >
-                                    <p className="text-sm whitespace-pre-wrap break-words">{mensaje.contenido}</p>
+                                    {/* Renderizar según tipo de mensaje */}
+                                    {mensaje.tipo === 'imagen' || mensaje.tipo === 'image' ? (
+                                        <div className="space-y-2">
+                                            <img
+                                                src={mensaje.contenido}
+                                                alt="Imagen enviada"
+                                                className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition"
+                                                onClick={() => window.open(mensaje.contenido, '_blank')}
+                                            />
+                                        </div>
+                                    ) : mensaje.tipo === 'audio' || mensaje.tipo === 'voice' ? (
+                                        <div className="space-y-2">
+                                            <audio controls className="w-full max-w-xs">
+                                                <source src={mensaje.contenido} type="audio/ogg" />
+                                                <source src={mensaje.contenido} type="audio/mpeg" />
+                                                Tu navegador no soporta audio.
+                                            </audio>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm whitespace-pre-wrap break-words">{mensaje.contenido}</p>
+                                    )}
+
                                     <div className={`flex items-center justify-end space-x-1 mt-1 text-xs ${mensaje.direccion === "saliente" ? "text-blue-100" : "text-gray-500 dark:text-gray-400"
                                         }`}>
                                         <span>{mensaje.created_at ? format(new Date(mensaje.created_at), "HH:mm", { locale: es }) : "--:--"}</span>

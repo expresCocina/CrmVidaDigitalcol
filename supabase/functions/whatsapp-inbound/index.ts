@@ -66,7 +66,10 @@ serve(async (req) => {
         const phoneNumber = message.from;
         const messageText = message.text?.body || "";
 
-        console.log(`Message from ${phoneNumber}: ${messageText}`);
+        // Extraer nombre del perfil de WhatsApp
+        const profileName = body.entry[0].changes[0].value.contacts?.[0]?.profile?.name || null;
+
+        console.log(`Message from ${phoneNumber} (${profileName || 'Sin nombre'}): ${messageText}`);
 
         // Buscar o crear conversación
         let { data: conversacion, error: convError } = await supabaseClient
@@ -113,7 +116,7 @@ serve(async (req) => {
             // Si no existe lead ni cliente, crear lead automáticamente
             if (!lead && !cliente) {
                 const { error: leadError } = await supabaseClient.from("leads").insert({
-                    nombre: `Lead WhatsApp ${phoneNumber}`,
+                    nombre: profileName || `Lead WhatsApp ${phoneNumber}`,
                     telefono: phoneNumber,
                     fuente_id: (
                         await supabaseClient
@@ -131,11 +134,121 @@ serve(async (req) => {
             }
         }
 
+        // Procesar contenido según tipo de mensaje
+        let contenido = messageText;
+        let tipoMensaje = message.type;
+
+        // Manejar imágenes
+        if (message.type === 'image' && message.image?.id) {
+            try {
+                const mediaId = message.image.id;
+                const accessToken = whatsappConfig?.credenciales?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+
+                // Obtener URL del media desde Meta API
+                const mediaInfoResponse = await fetch(
+                    `https://graph.facebook.com/v18.0/${mediaId}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                    }
+                );
+                const mediaInfo = await mediaInfoResponse.json();
+
+                if (mediaInfo.url) {
+                    // Descargar la imagen
+                    const imageResponse = await fetch(mediaInfo.url, {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                    });
+                    const imageBlob = await imageResponse.blob();
+
+                    // Subir a Supabase Storage
+                    const fileName = `whatsapp/${conversacion.id}/${Date.now()}_${mediaId}.jpg`;
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('mensajes')
+                        .upload(fileName, imageBlob, {
+                            contentType: message.image.mime_type || 'image/jpeg',
+                        });
+
+                    if (!uploadError && uploadData) {
+                        // Obtener URL pública
+                        const { data: { publicUrl } } = supabaseClient.storage
+                            .from('mensajes')
+                            .getPublicUrl(fileName);
+
+                        contenido = publicUrl;
+                        tipoMensaje = 'imagen';
+                    } else {
+                        console.error('Error uploading image:', uploadError);
+                        contenido = `[Imagen no disponible: ${uploadError?.message}]`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing image:', error);
+                contenido = '[Error al procesar imagen]';
+            }
+        }
+
+        // Manejar audio
+        if ((message.type === 'audio' || message.type === 'voice') && (message as any).audio?.id) {
+            try {
+                const mediaId = (message as any).audio.id;
+                const accessToken = whatsappConfig?.credenciales?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+
+                // Obtener URL del media
+                const mediaInfoResponse = await fetch(
+                    `https://graph.facebook.com/v18.0/${mediaId}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                    }
+                );
+                const mediaInfo = await mediaInfoResponse.json();
+
+                if (mediaInfo.url) {
+                    // Descargar el audio
+                    const audioResponse = await fetch(mediaInfo.url, {
+                        headers: {
+                            Authorization: `Bearer ${accessToken}`,
+                        },
+                    });
+                    const audioBlob = await audioResponse.blob();
+
+                    // Subir a Supabase Storage
+                    const fileName = `whatsapp/${conversacion.id}/${Date.now()}_${mediaId}.ogg`;
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('mensajes')
+                        .upload(fileName, audioBlob, {
+                            contentType: (message as any).audio.mime_type || 'audio/ogg',
+                        });
+
+                    if (!uploadError && uploadData) {
+                        // Obtener URL pública
+                        const { data: { publicUrl } } = supabaseClient.storage
+                            .from('mensajes')
+                            .getPublicUrl(fileName);
+
+                        contenido = publicUrl;
+                        tipoMensaje = 'audio';
+                    } else {
+                        console.error('Error uploading audio:', uploadError);
+                        contenido = `[Audio no disponible: ${uploadError?.message}]`;
+                    }
+                }
+            } catch (error) {
+                console.error('Error processing audio:', error);
+                contenido = '[Error al procesar audio]';
+            }
+        }
+
         // Guardar mensaje
         const { error: msgError } = await supabaseClient.from("mensajes").insert({
             conversacion_id: conversacion.id,
-            contenido: messageText,
-            tipo: message.type,
+            contenido: contenido,
+            tipo: tipoMensaje,
             direccion: "entrante",
             leido: false,
             entregado: true,
