@@ -29,6 +29,45 @@ export default function MensajesPage() {
 
     useEffect(() => {
         fetchConversaciones();
+
+        // Suscripción en tiempo real a cambios en conversaciones
+        const conversacionesChannel = supabase
+            .channel('conversaciones-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'conversaciones'
+                },
+                () => {
+                    console.log('Cambio en conversaciones detectado');
+                    fetchConversaciones();
+                }
+            )
+            .subscribe();
+
+        // Suscripción a nuevos mensajes para actualizar "ultimo_mensaje_at"
+        const mensajesChannel = supabase
+            .channel('mensajes-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'mensajes'
+                },
+                () => {
+                    console.log('Nuevo mensaje detectado');
+                    fetchConversaciones();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(conversacionesChannel);
+            supabase.removeChannel(mensajesChannel);
+        };
     }, []);
 
     const fetchConversaciones = async () => {

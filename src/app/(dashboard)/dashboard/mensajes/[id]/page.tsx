@@ -31,6 +31,34 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
         if (id) {
             fetchConversacion();
             fetchMensajes();
+
+            // Suscripción en tiempo real a nuevos mensajes
+            const channel = supabase
+                .channel(`mensajes-${id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'mensajes',
+                        filter: `conversacion_id=eq.${id}`
+                    },
+                    (payload) => {
+                        console.log('Nuevo mensaje recibido:', payload);
+                        if (payload.eventType === 'INSERT') {
+                            setMensajes(prev => [...prev, payload.new as any]);
+                        } else if (payload.eventType === 'UPDATE') {
+                            setMensajes(prev => prev.map(m =>
+                                m.id === payload.new.id ? payload.new as any : m
+                            ));
+                        }
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [id]);
 
