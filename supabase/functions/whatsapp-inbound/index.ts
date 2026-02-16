@@ -27,6 +27,16 @@ serve(async (req) => {
             Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
 
+        // Obtener configuración de WhatsApp
+        const { data: whatsappConfig } = await supabaseClient
+            .from("integraciones")
+            .select("credenciales")
+            .eq("tipo", "whatsapp")
+            .eq("activo", true)
+            .single();
+
+        const verifyToken = whatsappConfig?.credenciales?.verify_token || Deno.env.get("WHATSAPP_VERIFY_TOKEN");
+
         // Verificar webhook de WhatsApp
         if (req.method === "GET") {
             const url = new URL(req.url);
@@ -34,10 +44,7 @@ serve(async (req) => {
             const token = url.searchParams.get("hub.verify_token");
             const challenge = url.searchParams.get("hub.challenge");
 
-            if (
-                mode === "subscribe" &&
-                token === Deno.env.get("WHATSAPP_VERIFY_TOKEN")
-            ) {
+            if (mode === "subscribe" && token === verifyToken) {
                 return new Response(challenge, { status: 200 });
             }
 

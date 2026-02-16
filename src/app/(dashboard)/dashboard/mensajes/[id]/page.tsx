@@ -173,7 +173,7 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                                         {mensaje.direccion === "saliente" && (
                                             <>
                                                 {mensaje.leido ? (
-                                                    <CheckCheck className="w-4 h-4 text-blue-200" />
+                                                    <CheckCheck className="w-4 h-4 text-cyan-300" />
                                                 ) : mensaje.entregado ? (
                                                     <CheckCheck className="w-4 h-4" />
                                                 ) : (
