@@ -55,6 +55,45 @@ serve(async (req) => {
         const body = await req.json();
         console.log("WhatsApp webhook received:", JSON.stringify(body));
 
+        // Manejar actualizaciones de estado (leído, entregado)
+        if (body.entry?.[0]?.changes?.[0]?.value?.statuses?.[0]) {
+            const status = body.entry[0].changes[0].value.statuses[0];
+            const whatsappMessageId = status.id;
+            const statusType = status.status; // 'sent', 'delivered', 'read', 'failed'
+
+            console.log(`Status update for message ${whatsappMessageId}: ${statusType}`);
+
+            // Actualizar estado del mensaje en la base de datos
+            const updateData: any = {};
+
+            if (statusType === 'delivered') {
+                updateData.entregado = true;
+            } else if (statusType === 'read') {
+                updateData.leido = true;
+                updateData.entregado = true;
+            } else if (statusType === 'failed') {
+                updateData.metadata = { error: status.errors?.[0] };
+            }
+
+            if (Object.keys(updateData).length > 0) {
+                const { error } = await supabaseClient
+                    .from("mensajes")
+                    .update(updateData)
+                    .eq("metadata->>whatsapp_message_id", whatsappMessageId);
+
+                if (error) {
+                    console.error("Error updating message status:", error);
+                } else {
+                    console.log(`Message ${whatsappMessageId} updated to ${statusType}`);
+                }
+            }
+
+            return new Response(JSON.stringify({ success: true }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        // Si no hay mensaje, retornar éxito (puede ser otro tipo de webhook)
         if (!body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
             return new Response(JSON.stringify({ success: true }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
