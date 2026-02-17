@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Send, Phone, User, Check, CheckCheck } from "lucide-react";
+import { ChevronLeft, Send, Phone, User, Check, CheckCheck, Wifi, WifiOff } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import Link from "next/link";
@@ -22,6 +22,7 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [nuevoMensaje, setNuevoMensaje] = useState("");
+    const [realtimeStatus, setRealtimeStatus] = useState<'conectado' | 'desconectado' | 'error'>('desconectado');
 
     useEffect(() => {
         params.then(p => setId(p.id));
@@ -82,7 +83,16 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                         }
                     }
                 )
-                .subscribe();
+                .subscribe((status) => {
+                    console.log(`🔌 ESTADO REALTIME: ${status}`);
+                    if (status === 'SUBSCRIBED') {
+                        setRealtimeStatus('conectado');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        setRealtimeStatus('error');
+                    } else if (status === 'TIMED_OUT') {
+                        setRealtimeStatus('desconectado');
+                    }
+                });
 
             return () => {
                 supabase.removeChannel(channel);
@@ -199,8 +209,15 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                             {conversacion?.identificador_externo}
                         </p>
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {conversacion?.canal}
+                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+                        <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs border ${realtimeStatus === 'conectado'
+                                ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                                : 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                            }`}>
+                            {realtimeStatus === 'conectado' ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                            <span className="capitalize">{realtimeStatus}</span>
+                        </div>
+                        <span>{conversacion?.canal}</span>
                     </div>
                 </div>
             </div>
