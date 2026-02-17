@@ -175,11 +175,58 @@ export default function MensajesPage() {
         }
     };
 
+    const [filterUnread, setFilterUnread] = useState(false);
+    const [showArchived, setShowArchived] = useState(false);
+    const [activeTag, setActiveTag] = useState<string | null>(null);
+
     const filteredConversaciones = conversaciones.filter(conv => {
-        const contactName = getContactName(conv);
-        return contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            conv.identificador_externo?.toLowerCase().includes(searchTerm.toLowerCase());
+        // 1. Filtro de búsqueda (Buscamos en nombre o identificador)
+        const contactName = getContactName(conv).toLowerCase();
+        const search = searchTerm.toLowerCase();
+        const matchesSearch = contactName.includes(search) ||
+            conv.identificador_externo?.toLowerCase().includes(search);
+
+        if (!matchesSearch) return false;
+
+        // 2. Filtro de Archivados (Por defecto ocultamos archivadas a menos que se active el toggle)
+        const isArchived = conv.estado === 'archivada' || conv.estado === 'cerrada';
+        if (isArchived && !showArchived) return false;
+        if (!isArchived && showArchived) return false; // Si queremos ver SOLO archivados o AMBOS?
+        // Nota: El usuario suele querer ver "Archivados" como una lista separada o toggle.
+        // Vamos a hacer que si showArchived es true, SOLO muestre archivados.
+
+        // 3. Filtro de No Leídos
+        if (filterUnread && (conv.metadata?.mensajes_no_leidos || 0) <= 0) return false;
+
+        // 4. Filtro por Tag (asumiendo que los tags están en metadata.tags como array)
+        if (activeTag && !conv.metadata?.tags?.includes(activeTag)) return false;
+
+        return true;
     });
+    const getAvatarColor = (name: string) => {
+        const colors = [
+            "bg-blue-100 text-blue-600",
+            "bg-purple-100 text-purple-600",
+            "bg-pink-100 text-pink-600",
+            "bg-indigo-100 text-indigo-600",
+            "bg-green-100 text-green-600",
+            "bg-orange-100 text-orange-600",
+        ];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    };
+
+    const getInitials = (name: string) => {
+        return name
+            .split(" ")
+            .map((n) => n[0])
+            .slice(0, 2)
+            .join("")
+            .toUpperCase();
+    };
 
     return (
         <div className="h-[calc(100vh-8rem)]">
@@ -187,109 +234,191 @@ export default function MensajesPage() {
                 {/* Lista de Conversaciones */}
                 <div className="w-96 flex flex-col bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                     {/* Header */}
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Mensajes</h2>
-                        <div className="relative">
+                    <div className="p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Chat Center</h2>
+                            <div className="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg shadow-yellow-400/20">
+                                <MessageSquare className="w-5 h-5 text-black" />
+                            </div>
+                        </div>
+                        <div className="relative group">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-400" />
+                                <Search className="h-4 w-4 text-gray-400 group-focus-within:text-yellow-500 transition-colors" />
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                placeholder="Buscar conversación..."
+                                className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl leading-5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent sm:text-sm transition-all shadow-sm"
+                                placeholder="Buscar en chats y mensajes..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
+
+                        {/* Filtros */}
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setFilterUnread(!filterUnread)}
+                                className={`flex items-center px-4 py-1.5 text-xs font-semibold rounded-full border transition-colors ${filterUnread ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'}`}
+                            >
+                                No leídos
+                            </button>
+
+                            <div className="relative">
+                                <button
+                                    onClick={() => {
+                                        // Simple toggle for now, could be a dropdown later
+                                        if (activeTag) setActiveTag(null);
+                                        else {
+                                            const allTags = Array.from(new Set(conversaciones.flatMap(c => c.metadata?.tags || [])));
+                                            if (allTags.length > 0) setActiveTag(allTags[0] as string);
+                                        }
+                                    }}
+                                    className={`flex items-center px-4 py-1.5 text-xs font-semibold rounded-full border transition-colors ${activeTag ? 'bg-yellow-400 text-black border-yellow-400' : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'}`}
+                                >
+                                    {activeTag ? `#${activeTag}` : "Filtrar por tag"}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div
+                            onClick={() => setShowArchived(!showArchived)}
+                            className="flex items-center text-xs font-medium text-gray-400 pt-2 pb-1 border-b border-gray-50 dark:border-white/5 cursor-pointer hover:text-white transition-colors"
+                        >
+                            <MessageSquare className={`w-3 h-3 mr-2 ${showArchived ? 'text-yellow-400' : ''}`} />
+                            {showArchived ? "Cerrar archivados" : "Mostrar archivados"}
+                            <span className="ml-auto text-gray-300">
+                                {conversaciones.filter(c => c.estado === 'archivada' || c.estado === 'cerrada').length}
+                            </span>
+                        </div>
                     </div>
 
                     {/* Lista */}
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {loading ? (
-                            <div className="p-8 text-center text-gray-500">Cargando conversaciones...</div>
+                            <div className="p-8 text-center">
+                                <div className="inline-block w-6 h-6 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                                <p className="mt-2 text-sm text-gray-500">Cargando conversaciones...</p>
+                            </div>
                         ) : filteredConversaciones.length > 0 ? (
-                            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                                {filteredConversaciones.map((conv) => (
-                                    <Link
-                                        key={conv.id}
-                                        href={`/dashboard/mensajes/${conv.id}`}
-                                        className={`block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${selectedConversacion === conv.id ? "bg-blue-50 dark:bg-blue-900/20" : ""
-                                            }`}
-                                        onClick={() => {
-                                            setSelectedConversacion(conv.id);
-                                            // Resetear contador localmente al abrir
-                                            setConversaciones(prev => prev.map(c =>
-                                                c.id === conv.id ? { ...c, metadata: { ...c.metadata, mensajes_no_leidos: 0 } } : c
-                                            ));
-                                        }}
-                                    >
-                                        <div className="flex items-start space-x-3">
-                                            <div className="flex-shrink-0 relative">
-                                                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                                    {conv.canal === "whatsapp" ? (
-                                                        <Phone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                                    ) : (
-                                                        <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                                                    )}
+                            <div className="px-3 pb-4 space-y-1">
+                                {filteredConversaciones.map((conv) => {
+                                    const contactName = getContactName(conv);
+                                    const initials = getInitials(contactName);
+                                    const avatarColor = getAvatarColor(contactName);
+                                    const isSelected = selectedConversacion === conv.id;
+
+                                    return (
+                                        <Link
+                                            key={conv.id}
+                                            href={`/dashboard/mensajes/${conv.id}`}
+                                            className={`group relative flex items-center p-3 rounded-2xl transition-all duration-200 ${isSelected
+                                                ? "bg-yellow-400 shadow-lg shadow-yellow-400/10"
+                                                : "hover:bg-gray-50 dark:hover:bg-white/5"
+                                                }`}
+                                            onClick={() => {
+                                                setSelectedConversacion(conv.id);
+                                                setConversaciones(prev => prev.map(c =>
+                                                    c.id === conv.id ? { ...c, metadata: { ...c.metadata, mensajes_no_leidos: 0 } } : c
+                                                ));
+                                                // Notificar al layout global que refresque el contador
+                                                window.dispatchEvent(new Event('messages-read'));
+                                            }}
+                                        >
+                                            <div className="flex-shrink-0 relative mr-4">
+                                                <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg shadow-sm ${isSelected ? "bg-white text-black" : avatarColor}`}>
+                                                    {initials}
                                                 </div>
-                                                {/* Badge de No Leídos */}
+                                                {conv.canal === "whatsapp" && (
+                                                    <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-gray-900 flex items-center justify-center shadow-md p-0.5">
+                                                        <div className="w-full h-full rounded-full bg-green-500 flex items-center justify-center">
+                                                            <Phone className="w-3 h-3 text-white" />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Badge de No Leídos - Lyon Style */}
                                                 {(conv.metadata?.mensajes_no_leidos > 0) && (
-                                                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800">
+                                                    <div className="absolute -top-1 -left-1 bg-red-500 text-white text-[10px] font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-900 z-10 animate-pulse">
                                                         {conv.metadata.mensajes_no_leidos}
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                                                        {getContactName(conv)}
-                                                    </p>
+
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <h3 className={`text-sm font-bold truncate ${isSelected ? "text-black" : "text-gray-900 dark:text-white"}`}>
+                                                        {contactName}
+                                                    </h3>
                                                     {conv.ultimo_mensaje_at && (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        <span className={`text-[10px] font-medium ${isSelected ? "text-black/60" : "text-gray-400"}`}>
                                                             {format(new Date(conv.ultimo_mensaje_at), "HH:mm", { locale: es })}
-                                                        </p>
+                                                        </span>
                                                     )}
                                                 </div>
 
-                                                {/* Vista Previa del Mensaje */}
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate h-5">
-                                                    {conv.metadata?.ultimo_mensaje_contenido || conv.identificador_externo}
-                                                </p>
-
-                                                <div className="flex items-center justify-between mt-2">
-                                                    <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(conv.estado)}`}>
-                                                        {conv.estado}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                        {conv.canal}
-                                                    </span>
+                                                <div className="flex items-center justify-between">
+                                                    <p className={`text-xs truncate h-4 ${isSelected ? "text-black/70" : "text-gray-500 dark:text-gray-400"}`}>
+                                                        {conv.metadata?.ultimo_mensaje_contenido || conv.identificador_externo}
+                                                    </p>
                                                 </div>
+
+                                                {!isSelected && (
+                                                    <div className="mt-2">
+                                                        <span className={`px-2 py-0.5 inline-flex text-[9px] uppercase tracking-wider font-bold rounded-lg ${getEstadoColor(conv.estado)}`}>
+                                                            {conv.estado}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    </Link>
-                                ))}
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         ) : (
-                            <div className="p-8 text-center">
-                                <MessageSquare className="mx-auto h-12 w-12 text-gray-400" />
-                                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay conversaciones</h3>
-                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    Las conversaciones de WhatsApp aparecerán aquí.
+                            <div className="p-8 text-center text-gray-900 dark:text-white">
+                                <MessageSquare className="mx-auto h-12 w-12 text-gray-200 dark:text-white/10" />
+                                <h3 className="mt-4 text-sm font-bold text-gray-900 dark:text-white">No hay chats</h3>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Inicia una conversación para verla aquí.
                                 </p>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Área de Mensajes */}
-                <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                    <div className="text-center text-gray-500 dark:text-gray-400">
-                        <MessageSquare className="mx-auto h-16 w-16 mb-4 opacity-50" />
-                        <p className="text-lg font-medium">Selecciona una conversación</p>
-                        <p className="text-sm mt-2">Elige una conversación de la lista para ver los mensajes</p>
+                {/* Área de Mensajes - Placeholder elegante */}
+                <div className="flex-1 bg-gray-50/50 dark:bg-white/[0.02] flex items-center justify-center p-12">
+                    <div className="text-center max-w-sm space-y-6">
+                        <div className="w-24 h-24 rounded-3xl bg-white dark:bg-white/5 shadow-xl border border-gray-100 dark:border-white/5 flex items-center justify-center mx-auto transition-transform hover:scale-110 cursor-default group">
+                            <MessageSquare className="w-10 h-10 text-gray-300 dark:text-white/20 group-hover:text-yellow-400 transition-colors" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">Selecciona una conversación</h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                                Elige una conversación de la lista de la izquierda para ver el historial completo y responder.
+                            </p>
+                        </div>
+                        <button className="px-6 py-2.5 bg-yellow-400 text-black font-bold text-sm rounded-xl shadow-lg shadow-yellow-400/20 hover:bg-yellow-500 transition-all active:scale-95">
+                            Nueva conversación
+                        </button>
                     </div>
                 </div>
             </div>
+
+            <style jsx global>{`
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(0, 0, 0, 0.05);
+                    border-radius: 10px;
+                }
+                .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.05);
+                }
+            `}</style>
         </div>
     );
 }

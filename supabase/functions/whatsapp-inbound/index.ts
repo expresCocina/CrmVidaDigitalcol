@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { sendMetaEvent, hashData } from "../_shared/facebook-capi.ts";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -17,15 +18,20 @@ interface WhatsAppMessage {
 }
 
 serve(async (req) => {
-    if (req.method === "OPTIONS") {
-        return new Response("ok", { headers: corsHeaders });
-    }
+    if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+    console.log("[INBOUND] Webhook received");
 
     try {
-        const supabaseClient = createClient(
-            Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-        );
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error("[INBOUND] Critical: Missing Supabase environment variables");
+            return new Response(JSON.stringify({ error: "Server Configuration Error (ENV)" }), { status: 500 });
+        }
+
+        const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
         // Obtener configuración de WhatsApp
         const { data: whatsappConfig } = await supabaseClient
@@ -33,11 +39,11 @@ serve(async (req) => {
             .select("credenciales")
             .eq("tipo", "whatsapp")
             .eq("activo", true)
-            .single();
+            .maybeSingle();
 
         const verifyToken = whatsappConfig?.credenciales?.verify_token || Deno.env.get("WHATSAPP_VERIFY_TOKEN");
 
-        // Verificar webhook de WhatsApp
+        // Verificar webhook (GET)
         if (req.method === "GET") {
             const url = new URL(req.url);
             const mode = url.searchParams.get("hub.mode");
@@ -47,68 +53,51 @@ serve(async (req) => {
             if (mode === "subscribe" && token === verifyToken) {
                 return new Response(challenge, { status: 200 });
             }
-
             return new Response("Forbidden", { status: 403 });
         }
 
-        // Procesar mensaje entrante
-        const body = await req.json();
-        console.log("WhatsApp webhook received:", JSON.stringify(body));
+        // Procesar mensaje (POST)
+        const body = await req.json().catch(() => ({}));
 
         // Manejar actualizaciones de estado (leído, entregado)
         if (body.entry?.[0]?.changes?.[0]?.value?.statuses?.[0]) {
             const status = body.entry[0].changes[0].value.statuses[0];
             const whatsappMessageId = status.id;
-            const statusType = status.status; // 'sent', 'delivered', 'read', 'failed'
+            const statusType = status.status;
 
-            console.log(`Status update for message ${whatsappMessageId}: ${statusType}`);
+            console.log(`[INBOUND] Status Update: ${statusType} for ID ${whatsappMessageId}`);
 
-            // Actualizar estado del mensaje en la base de datos
             const updateData: any = {};
-
-            if (statusType === 'delivered') {
-                updateData.entregado = true;
-            } else if (statusType === 'read') {
+            if (statusType === 'delivered') updateData.entregado = true;
+            else if (statusType === 'read') {
                 updateData.leido = true;
                 updateData.entregado = true;
             } else if (statusType === 'failed') {
-                updateData.metadata = { error: status.errors?.[0] };
+                updateData.metadata = { error: status.errors?.[0], last_status: statusType };
             }
 
             if (Object.keys(updateData).length > 0) {
-                const { error } = await supabaseClient
+                await supabaseClient
                     .from("mensajes")
                     .update(updateData)
                     .eq("metadata->>whatsapp_message_id", whatsappMessageId);
-
-                if (error) {
-                    console.error("Error updating message status:", error);
-                } else {
-                    console.log(`Message ${whatsappMessageId} updated to ${statusType}`);
-                }
             }
 
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return new Response(JSON.stringify({ success: true }), { status: 200 });
         }
 
-        // Si no hay mensaje, retornar éxito (puede ser otro tipo de webhook)
-        if (!body.entry?.[0]?.changes?.[0]?.value?.messages?.[0]) {
-            return new Response(JSON.stringify({ success: true }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+        // Si no hay mensaje, retornar éxito
+        const messageData = body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+        if (!messageData) {
+            return new Response(JSON.stringify({ success: true }), { status: 200 });
         }
 
-        const message: WhatsAppMessage =
-            body.entry[0].changes[0].value.messages[0];
+        const message: WhatsAppMessage = messageData;
         const phoneNumber = message.from;
         const messageText = message.text?.body || "";
-
-        // Extraer nombre del perfil de WhatsApp
         const profileName = body.entry[0].changes[0].value.contacts?.[0]?.profile?.name || null;
 
-        console.log(`Message from ${phoneNumber} (${profileName || 'Sin nombre'}): ${messageText}`);
+        console.log(`[INBOUND] New message from ${phoneNumber}: "${messageText}"`);
 
         // Buscar o crear conversación
         let { data: conversacion, error: convError } = await supabaseClient
@@ -116,23 +105,12 @@ serve(async (req) => {
             .select("*")
             .eq("canal", "whatsapp")
             .eq("identificador_externo", phoneNumber)
-            .single();
+            .maybeSingle();
 
-        if (convError || !conversacion) {
-            // Buscar lead o cliente por teléfono
-            const { data: lead } = await supabaseClient
-                .from("leads")
-                .select("id")
-                .eq("telefono", phoneNumber)
-                .single();
+        if (!conversacion) {
+            const { data: lead } = await supabaseClient.from("leads").select("id").eq("telefono", phoneNumber).maybeSingle();
+            const { data: cliente } = await supabaseClient.from("clientes").select("id").eq("telefono", phoneNumber).maybeSingle();
 
-            const { data: cliente } = await supabaseClient
-                .from("clientes")
-                .select("id")
-                .eq("telefono", phoneNumber)
-                .single();
-
-            // Crear nueva conversación
             const { data: newConv, error: createError } = await supabaseClient
                 .from("conversaciones")
                 .insert({
@@ -145,55 +123,47 @@ serve(async (req) => {
                 .select()
                 .single();
 
-            if (createError) {
-                console.error("Error creating conversation:", createError);
-                throw createError;
-            }
-
+            if (createError) throw createError;
             conversacion = newConv;
 
-            // Si no existe lead ni cliente, crear lead automáticamente
+            // Crear lead si no existe
             if (!lead && !cliente) {
-                const { data: newLead, error: leadError } = await supabaseClient.from("leads").insert({
+                const { data: newLead } = await supabaseClient.from("leads").insert({
                     nombre: profileName || `Lead WhatsApp ${phoneNumber}`,
                     telefono: phoneNumber,
-                    fuente_id: (
-                        await supabaseClient
-                            .from("fuentes_leads")
-                            .select("id")
-                            .eq("nombre", "WhatsApp")
-                            .single()
-                    ).data?.id,
+                    fuente_id: (await supabaseClient.from("fuentes_leads").select("id").eq("nombre", "WhatsApp").maybeSingle()).data?.id,
                     estado: "nuevo",
                 }).select().single();
 
-                if (leadError) {
-                    console.error("Error creating lead:", leadError);
-                } else if (newLead) {
-                    // ACTUALIZACIÓN CRÍTICA: Vincular el nuevo lead a la conversación
-                    const { error: updateError } = await supabaseClient
-                        .from("conversaciones")
-                        .update({ lead_id: newLead.id })
-                        .eq("id", conversacion.id);
+                if (newLead) {
+                    await supabaseClient.from("conversaciones").update({ lead_id: newLead.id }).eq("id", conversacion.id);
+                    conversacion.lead_id = newLead.id;
 
-                    if (updateError) console.error("Error linking lead to conversation:", updateError);
-                    else console.log(`Linked new lead ${newLead.id} to conversation ${conversacion.id}`);
+                    // --- TRACKING CAPI: LEAD ---
+                    try {
+                        const hashedPhone = await hashData(phoneNumber);
+                        const hashedName = profileName ? await hashData(profileName) : undefined;
+
+                        sendMetaEvent({
+                            event_name: "Lead",
+                            user_data: {
+                                ph: [hashedPhone],
+                                fn: hashedName ? [hashedName] : undefined,
+                            },
+                            custom_data: {
+                                content_name: "Nuevo Prospecto WhatsApp",
+                                status: "nuevo"
+                            },
+                            event_id: `lead_${phoneNumber}_${Date.now()}`
+                        });
+                    } catch (e) {
+                        console.error("[CAPI] Error tracking Lead:", e);
+                    }
                 }
-            } else if (lead && !conversacion.lead_id) {
-                // Si ya existía el lead pero la conversación no lo tenía (caso raro pero posible)
-                await supabaseClient
-                    .from("conversaciones")
-                    .update({ lead_id: lead.id })
-                    .eq("id", conversacion.id);
-            } else if (cliente && !conversacion.cliente_id) {
-                await supabaseClient
-                    .from("conversaciones")
-                    .update({ cliente_id: cliente.id })
-                    .eq("id", conversacion.id);
             }
         }
 
-        // Procesar contenido según tipo de mensaje
+        // Guardar mensaje
         let contenido = messageText;
         let tipoMensaje = message.type;
 
@@ -203,27 +173,17 @@ serve(async (req) => {
                 const mediaId = message.image.id;
                 const accessToken = whatsappConfig?.credenciales?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
 
-                // Obtener URL del media desde Meta API
-                const mediaInfoResponse = await fetch(
-                    `https://graph.facebook.com/v18.0/${mediaId}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
-                    }
-                );
+                const mediaInfoResponse = await fetch(`https://graph.facebook.com/v18.0/${mediaId}`, {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                });
                 const mediaInfo = await mediaInfoResponse.json();
 
                 if (mediaInfo.url) {
-                    // Descargar la imagen
                     const imageResponse = await fetch(mediaInfo.url, {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
+                        headers: { Authorization: `Bearer ${accessToken}` },
                     });
                     const imageBlob = await imageResponse.blob();
 
-                    // Subir a Supabase Storage
                     const fileName = `whatsapp/${conversacion.id}/${Date.now()}_${mediaId}.jpg`;
                     const { data: uploadData, error: uploadError } = await supabaseClient.storage
                         .from('mensajes')
@@ -232,20 +192,13 @@ serve(async (req) => {
                         });
 
                     if (!uploadError && uploadData) {
-                        // Obtener URL pública
-                        const { data: { publicUrl } } = supabaseClient.storage
-                            .from('mensajes')
-                            .getPublicUrl(fileName);
-
+                        const { data: { publicUrl } } = supabaseClient.storage.from('mensajes').getPublicUrl(fileName);
                         contenido = publicUrl;
                         tipoMensaje = 'imagen';
-                    } else {
-                        console.error('Error uploading image:', uploadError);
-                        contenido = `[Imagen no disponible: ${uploadError?.message}]`;
                     }
                 }
             } catch (error) {
-                console.error('Error processing image:', error);
+                console.error('[INBOUND] Error processing image:', error);
                 contenido = '[Error al procesar imagen]';
             }
         }
@@ -256,27 +209,17 @@ serve(async (req) => {
                 const mediaId = (message as any).audio.id;
                 const accessToken = whatsappConfig?.credenciales?.access_token || Deno.env.get("WHATSAPP_ACCESS_TOKEN");
 
-                // Obtener URL del media
-                const mediaInfoResponse = await fetch(
-                    `https://graph.facebook.com/v18.0/${mediaId}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
-                    }
-                );
+                const mediaInfoResponse = await fetch(`https://graph.facebook.com/v18.0/${mediaId}`, {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                });
                 const mediaInfo = await mediaInfoResponse.json();
 
                 if (mediaInfo.url) {
-                    // Descargar el audio
                     const audioResponse = await fetch(mediaInfo.url, {
-                        headers: {
-                            Authorization: `Bearer ${accessToken}`,
-                        },
+                        headers: { Authorization: `Bearer ${accessToken}` },
                     });
                     const audioBlob = await audioResponse.blob();
 
-                    // Subir a Supabase Storage
                     const fileName = `whatsapp/${conversacion.id}/${Date.now()}_${mediaId}.ogg`;
                     const { data: uploadData, error: uploadError } = await supabaseClient.storage
                         .from('mensajes')
@@ -285,95 +228,60 @@ serve(async (req) => {
                         });
 
                     if (!uploadError && uploadData) {
-                        // Obtener URL pública
-                        const { data: { publicUrl } } = supabaseClient.storage
-                            .from('mensajes')
-                            .getPublicUrl(fileName);
-
+                        const { data: { publicUrl } } = supabaseClient.storage.from('mensajes').getPublicUrl(fileName);
                         contenido = publicUrl;
                         tipoMensaje = 'audio';
-                    } else {
-                        console.error('Error uploading audio:', uploadError);
-                        contenido = `[Audio no disponible: ${uploadError?.message}]`;
                     }
                 }
             } catch (error) {
-                console.error('Error processing audio:', error);
+                console.error('[INBOUND] Error processing audio:', error);
                 contenido = '[Error al procesar audio]';
             }
         }
 
-        // Guardar mensaje
         const { error: msgError } = await supabaseClient.from("mensajes").insert({
             conversacion_id: conversacion.id,
             contenido: contenido,
-            tipo: tipoMensaje,
+            tipo: tipoMensaje === 'image' ? 'imagen' : (tipoMensaje === 'audio' || tipoMensaje === 'voice' ? 'audio' : 'texto'),
             direccion: "entrante",
             leido: false,
             entregado: true,
             metadata: { whatsapp_message_id: message.id },
         });
 
-        if (msgError) {
-            console.error("Error saving message:", msgError);
-            throw msgError;
-        }
+        if (msgError) console.error("[INBOUND] Error saving message:", msgError.message);
 
-        // Llamar a IA para generar respuesta automática (opcional)
+        // Llamar al Chatbot (No bloqueante de la respuesta a Meta)
         try {
-            const aiResponse = await fetch(
-                `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-assistant`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-                    },
-                    body: JSON.stringify({
-                        mensaje: messageText,
-                        conversacion_id: conversacion.id,
-                        tipo: "respuesta_automatica",
-                    }),
-                }
-            );
-
-            if (aiResponse.ok) {
-                const aiData = await aiResponse.json();
-                console.log("AI response:", aiData);
-
-                // Enviar respuesta automática si está habilitada
-                if (aiData.respuesta && aiData.enviar_automaticamente) {
-                    await fetch(
-                        `${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-outbound`,
-                        {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                                Authorization: `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
-                            },
-                            body: JSON.stringify({
-                                to: phoneNumber,
-                                message: aiData.respuesta,
-                                conversacion_id: conversacion.id,
-                            }),
-                        }
-                    );
-                }
+            let leadNameFinal = profileName || "amigo/a";
+            if (conversacion.lead_id) {
+                const { data: leadData } = await supabaseClient.from("leads").select("nombre").eq("id", conversacion.lead_id).maybeSingle();
+                if (leadData?.nombre) leadNameFinal = leadData.nombre;
             }
-        } catch (aiError) {
-            console.error("Error calling AI assistant:", aiError);
-            // No lanzar error, continuar sin IA
+
+            // Llamada asíncrona (fuego y olvido relativo para asegurar respuesta rápida a Meta)
+            fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/sales-chatbot`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({
+                    phoneNumber: phoneNumber,
+                    messageText: messageText,
+                    conversacionId: conversacion.id,
+                    leadName: leadNameFinal,
+                }),
+            }).catch(e => console.error("[INBOUND] Chatbot call non-blocking error:", e.message));
+
+        } catch (cbError: any) {
+            console.error("[INBOUND] Error preparing chatbot call:", cbError.message);
         }
 
-        return new Response(JSON.stringify({ success: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-        });
-    } catch (error) {
-        console.error("Error processing webhook:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 500,
-        });
+        return new Response(JSON.stringify({ success: true }), { status: 200 });
+
+    } catch (error: any) {
+        console.error("[INBOUND] Fatal error:", error.message);
+        return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 });
