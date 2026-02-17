@@ -30,26 +30,26 @@ export default function MensajesPage() {
     useEffect(() => {
         fetchConversaciones();
 
-        // Suscripción en tiempo real a cambios en conversaciones
-        const conversacionesChannel = supabase
-            .channel('conversaciones-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'conversaciones'
-                },
-                () => {
-                    console.log('Cambio en conversaciones detectado');
-                    fetchConversaciones();
-                }
-            )
-            .subscribe();
+        // Función para reproducir sonido
+        const playNotificationSound = () => {
+            try {
+                const audio = new Audio('/sounds/notification.mp3'); // Fallback URL
+                // Oscilador simple como backup inmediato
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.setValueAtTime(800, ctx.currentTime);
+                gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) { console.error("Error playing sound", e); }
+        };
 
-        // Suscripción a nuevos mensajes para actualizar "ultimo_mensaje_at"
-        const mensajesChannel = supabase
-            .channel('mensajes-changes')
+        // Suscripción a nuevos mensajes para actualizar lista
+        const channel = supabase
+            .channel('global-mensajes-changes')
             .on(
                 'postgres_changes',
                 {
@@ -57,21 +57,57 @@ export default function MensajesPage() {
                     schema: 'public',
                     table: 'mensajes'
                 },
-                () => {
-                    console.log('Nuevo mensaje detectado');
-                    fetchConversaciones();
+                (payload) => {
+                    console.log('Nuevo mensaje global detectado:', payload);
+                    const nuevoMensaje = payload.new as any;
+
+                    setConversaciones(prev => {
+                        const nuevaLista = [...prev];
+                        const index = nuevaLista.findIndex(c => c.id === nuevoMensaje.conversacion_id);
+
+                        // Si existe la conversación, moverla al inicio y actualizar
+                        if (index !== -1) {
+                            const conversacion = { ...nuevaLista[index] };
+                            conversacion.ultimo_mensaje_at = nuevoMensaje.created_at;
+                            conversacion.metadata = {
+                                ...conversacion.metadata,
+                                ultimo_mensaje_contenido: nuevoMensaje.tipo === 'imagen' || nuevoMensaje.tipo === 'image' ? '📷 Imagen' :
+                                    nuevoMensaje.tipo === 'audio' || nuevoMensaje.tipo === 'voice' ? '🎤 Nota de voz' :
+                                        nuevoMensaje.contenido
+                            };
+
+                            // Incrementar contador si es mensaje entrante
+                            if (nuevoMensaje.direccion === 'entrante') {
+                                conversacion.metadata = {
+                                    ...conversacion.metadata,
+                                    mensajes_no_leidos: (conversacion.metadata?.mensajes_no_leidos || 0) + 1
+                                };
+                                playNotificationSound();
+                            }
+
+                            // Quitar de la posición actual y poner al inicio
+                            nuevaLista.splice(index, 1);
+                            nuevaLista.unshift(conversacion);
+                            return nuevaLista;
+                        } else {
+                            // Si no existe (nueva conv), recargar todo
+                            fetchConversaciones();
+                            return prev;
+                        }
+                    });
                 }
             )
             .subscribe();
 
         return () => {
-            supabase.removeChannel(conversacionesChannel);
-            supabase.removeChannel(mensajesChannel);
+            supabase.removeChannel(channel);
         };
     }, []);
 
     const fetchConversaciones = async () => {
         setLoading(true);
+        // Traemos conversaciones y luego haremos un fetch secundario para último mensaje si es necesario
+        // Por ahora optimizamos usando lo que tenemos
         const { data, error } = await supabase
             .from("conversaciones")
             .select(`
@@ -82,8 +118,44 @@ export default function MensajesPage() {
             .order("ultimo_mensaje_at", { ascending: false });
 
         if (!error && data) {
-            // Force type compatibility or allow data to flow if interface matches
-            setConversaciones(data as Conversacion[]);
+            // Nota: En un entorno real, idealmente tendríamos una vista o función RPC 
+            // que nos devuelva el último mensaje y conteo. 
+            // Por simplicidad y rapidez, asumiremos que 'ultimo_mensaje_at' ordena,
+            // y para el contenido del último mensaje, haremos un fetch rápido de los últimos mensajes.
+
+            const conversacionesConDetalles = await Promise.all(data.map(async (conv: any) => {
+                // Obtener último mensaje real para preview
+                const { data: lastMsg } = await supabase
+                    .from("mensajes")
+                    .select("contenido, tipo, created_at, direccion, leido")
+                    .eq("conversacion_id", conv.id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single();
+
+                // Obtener conteo de no leídos
+                const { count } = await supabase
+                    .from("mensajes")
+                    .select("id", { count: 'exact', head: true })
+                    .eq("conversacion_id", conv.id)
+                    .eq("direccion", "entrante")
+                    .eq("leido", false);
+
+                return {
+                    ...conv,
+                    metadata: {
+                        ...conv.metadata,
+                        ultimo_mensaje_contenido: lastMsg ? (
+                            (lastMsg.tipo === 'imagen' || lastMsg.tipo === 'image') ? '📷 Imagen' :
+                                (lastMsg.tipo === 'audio' || lastMsg.tipo === 'voice') ? '🎤 Nota de voz' :
+                                    lastMsg.contenido
+                        ) : '',
+                        mensajes_no_leidos: count || 0
+                    }
+                };
+            }));
+
+            setConversaciones(conversacionesConDetalles);
         }
         setLoading(false);
     };
@@ -143,10 +215,16 @@ export default function MensajesPage() {
                                         href={`/dashboard/mensajes/${conv.id}`}
                                         className={`block p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${selectedConversacion === conv.id ? "bg-blue-50 dark:bg-blue-900/20" : ""
                                             }`}
-                                        onClick={() => setSelectedConversacion(conv.id)}
+                                        onClick={() => {
+                                            setSelectedConversacion(conv.id);
+                                            // Resetear contador localmente al abrir
+                                            setConversaciones(prev => prev.map(c =>
+                                                c.id === conv.id ? { ...c, metadata: { ...c.metadata, mensajes_no_leidos: 0 } } : c
+                                            ));
+                                        }}
                                     >
                                         <div className="flex items-start space-x-3">
-                                            <div className="flex-shrink-0">
+                                            <div className="flex-shrink-0 relative">
                                                 <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                                                     {conv.canal === "whatsapp" ? (
                                                         <Phone className="w-6 h-6 text-blue-600 dark:text-blue-400" />
@@ -154,6 +232,12 @@ export default function MensajesPage() {
                                                         <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                                                     )}
                                                 </div>
+                                                {/* Badge de No Leídos */}
+                                                {(conv.metadata?.mensajes_no_leidos > 0) && (
+                                                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white dark:border-gray-800">
+                                                        {conv.metadata.mensajes_no_leidos}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between">
@@ -162,13 +246,16 @@ export default function MensajesPage() {
                                                     </p>
                                                     {conv.ultimo_mensaje_at && (
                                                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                                                            {format(new Date(conv.ultimo_mensaje_at), "d MMM", { locale: es })}
+                                                            {format(new Date(conv.ultimo_mensaje_at), "HH:mm", { locale: es })}
                                                         </p>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    {conv.identificador_externo}
+
+                                                {/* Vista Previa del Mensaje */}
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate h-5">
+                                                    {conv.metadata?.ultimo_mensaje_contenido || conv.identificador_externo}
                                                 </p>
+
                                                 <div className="flex items-center justify-between mt-2">
                                                     <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${getEstadoColor(conv.estado)}`}>
                                                         {conv.estado}
