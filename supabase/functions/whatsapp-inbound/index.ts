@@ -154,7 +154,7 @@ serve(async (req) => {
 
             // Si no existe lead ni cliente, crear lead automáticamente
             if (!lead && !cliente) {
-                const { error: leadError } = await supabaseClient.from("leads").insert({
+                const { data: newLead, error: leadError } = await supabaseClient.from("leads").insert({
                     nombre: profileName || `Lead WhatsApp ${phoneNumber}`,
                     telefono: phoneNumber,
                     fuente_id: (
@@ -165,11 +165,31 @@ serve(async (req) => {
                             .single()
                     ).data?.id,
                     estado: "nuevo",
-                });
+                }).select().single();
 
                 if (leadError) {
                     console.error("Error creating lead:", leadError);
+                } else if (newLead) {
+                    // ACTUALIZACIÓN CRÍTICA: Vincular el nuevo lead a la conversación
+                    const { error: updateError } = await supabaseClient
+                        .from("conversaciones")
+                        .update({ lead_id: newLead.id })
+                        .eq("id", conversacion.id);
+
+                    if (updateError) console.error("Error linking lead to conversation:", updateError);
+                    else console.log(`Linked new lead ${newLead.id} to conversation ${conversacion.id}`);
                 }
+            } else if (lead && !conversacion.lead_id) {
+                // Si ya existía el lead pero la conversación no lo tenía (caso raro pero posible)
+                await supabaseClient
+                    .from("conversaciones")
+                    .update({ lead_id: lead.id })
+                    .eq("id", conversacion.id);
+            } else if (cliente && !conversacion.cliente_id) {
+                await supabaseClient
+                    .from("conversaciones")
+                    .update({ cliente_id: cliente.id })
+                    .eq("id", conversacion.id);
             }
         }
 

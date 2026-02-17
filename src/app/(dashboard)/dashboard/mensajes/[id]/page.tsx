@@ -28,36 +28,69 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
         params.then(p => setId(p.id));
     }, []);
 
+    // Marcar mensajes como leídos
+    useEffect(() => {
+        const markAsRead = async () => {
+            if (mensajes.length === 0) return;
+
+            // Filtrar solo los mensajes entrantes no leídos
+            const unreadMessages = mensajes.filter(m =>
+                m.direccion === 'entrante' && !m.leido
+            );
+
+            if (unreadMessages.length > 0) {
+                console.log(`Marcando ${unreadMessages.length} mensajes como leídos...`);
+
+                // Actualizar en DB
+                const { error } = await supabase
+                    .from('mensajes')
+                    .update({ leido: true })
+                    .eq('conversacion_id', id)
+                    .eq('direccion', 'entrante')
+                    .eq('leido', false);
+
+                if (!error) {
+                    // Actualizar estado local para reflejar cambio inmediato
+                    setMensajes(prev => prev.map(m =>
+                        (m.direccion === 'entrante' && !m.leido) ? { ...m, leido: true } : m
+                    ));
+
+                    // Disparar evento para actualizar contador global (hack simple)
+                    // En una app más compleja usaríamos Context o Redux
+                    window.dispatchEvent(new Event('messages-read'));
+                } else {
+                    console.error("Error al marcar como leído:", error);
+                }
+            }
+        };
+
+        if (id && mensajes.length > 0) {
+            markAsRead();
+        }
+    }, [id, mensajes.length]); // Dependencia en length para no ejecutar en cada re-render innecesario
+
     useEffect(() => {
         if (id) {
             fetchConversacion();
             fetchMensajes();
 
-            // Función para reproducir sonido de notificación
             const playNotificationSound = () => {
                 try {
-                    // Usar API de Audio Web
-                    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-
-                    oscillator.frequency.value = 800;
-                    oscillator.type = 'sine';
-
-                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-                    oscillator.start(audioContext.currentTime);
-                    oscillator.stop(audioContext.currentTime + 0.5);
-                } catch (error) {
-                    console.log('No se pudo reproducir sonido:', error);
+                    const audio = new Audio('/sounds/notification.mp3');
+                    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.setValueAtTime(800, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    osc.start();
+                    osc.stop(ctx.currentTime + 0.3);
+                } catch (e) {
+                    // Ignorar errores de autoplay policy
                 }
             };
 
-            // Suscripción en tiempo real a nuevos mensajes
             const channel = supabase
                 .channel(`mensajes-${id}`)
                 .on(
@@ -69,21 +102,21 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                         filter: `conversacion_id=eq.${id}`
                     },
                     (payload) => {
-                        console.log('Nuevo mensaje recibido:', payload);
+                        console.log('🔔 REALTIME MSG:', payload);
                         if (payload.eventType === 'INSERT') {
-                            setMensajes(prev => [...prev, payload.new as any]);
-                            // Reproducir sonido solo para mensajes entrantes
+                            setMensajes((prev) => [...prev, payload.new as any]);
                             if ((payload.new as any).direccion === 'entrante') {
                                 playNotificationSound();
                             }
                         } else if (payload.eventType === 'UPDATE') {
-                            setMensajes(prev => prev.map(m =>
+                            setMensajes((prev) => prev.map((m) =>
                                 m.id === payload.new.id ? payload.new as any : m
                             ));
                         }
                     }
                 )
                 .subscribe((status) => {
+                    // Solo actualizar si es un estado definitivo o error, ignorar 'CLOSED' temporales de reconexión
                     console.log(`🔌 ESTADO REALTIME: ${status}`);
                     if (status === 'SUBSCRIBED') {
                         setRealtimeStatus('conectado');
@@ -211,8 +244,8 @@ export default function ConversacionPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
                         <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs border ${realtimeStatus === 'conectado'
-                                ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
-                                : 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                            ? 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800'
+                            : 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
                             }`}>
                             {realtimeStatus === 'conectado' ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
                             <span className="capitalize">{realtimeStatus}</span>
