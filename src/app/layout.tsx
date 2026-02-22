@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import MetaPixel from "@/components/analytics/MetaPixel";
@@ -74,13 +73,6 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="es">
-            <head>
-                {/* AMC Agency Web Protection */}
-                <Script 
-                    src="https://amcagencyweb.com/api/protect?domain=crm-vida-digitalcol.vercel.app"
-                    strategy="afterInteractive"
-                />
-            </head>
             <body className={inter.className}>
                 <AuthProvider>
                     <MetaPixel />
